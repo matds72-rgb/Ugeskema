@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Håndkirurgisk Sektion - Ugeskema & Kalender</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0284c7">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#f8fafc; margin:0; padding:12px; color:#0f172a; -webkit-tap-highlight-color:transparent; }
+    .container { max-width:1280px; margin:0 auto; background:#ffffff; padding:16px; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border:1px solid #e2e8f0; }
+    .main-tab-bar { display:flex; gap:8px; margin-bottom:14px; border-bottom:2px solid #f1f5f9; padding-bottom:8px; flex-wrap:wrap; }
+    .tab-btn { flex:1; min-width:140px; padding:9px 12px; font-size:0.88rem; font-weight:600; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; cursor:pointer; text-align:center; transition:all 0.15s ease; }
+    .tab-btn:hover { background:#f1f5f9; color:#0f172a; }
+    .tab-btn.active { background:#e0f2fe; color:#0369a1; border-color:#38bdf8; font-weight:700; box-shadow:0 1px 3px rgba(2,132,199,0.15); }
+    .nav-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; background:#f8fafc; padding:9px 12px; border-radius:8px; border:1px solid #e2e8f0; flex-wrap:wrap; gap:8px; }
+    .nav-btn { display:inline-flex; align-items:center; justify-content:center; background:#0284c7; color:#ffffff; padding:7px 13px; font-size:0.84rem; font-weight:600; border-radius:6px; border:none; cursor:pointer; transition:background 0.15s ease; }
+    .nav-btn:hover:not(.disabled) { background:#0369a1; }
+    .nav-btn.disabled { background:#cbd5e1; color:#94a3b8; cursor:not-allowed; }
+    .week-select { font-size:0.88rem; font-weight:600; padding:6px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; cursor:pointer; }
+    .header-box { margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px; }
+    .title { font-size:1.12rem; font-weight:700; color:#0f172a; margin:0; }
+    .subtitle { font-size:0.82rem; color:#64748b; margin-top:4px; font-weight:500; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .month-badge { display:inline-flex; align-items:center; background:#e0e7fe; color:#0369a1; font-weight:700; font-size:0.78rem; padding:3px 8px; border-radius:6px; border:1px solid #bae6fd; }
+    .table-wrapper { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:6px; border:1px solid #cbd5e1; }
+    table { border-collapse:collapse; width:100%; min-width:760px; text-align:center; }
+    th, td { border:1px solid #94a3b8; padding:8px 5px; font-size:0.82rem; vertical-align:middle; line-height:1.35; color:#0f172a; }
+    th { font-weight:700; background-color:#f1f5f9; color:#0f172a; border-bottom:2px solid #94a3b8; }
+    td.col-funktion { font-weight:600; width:190px; border-right:2px solid #64748b; font-size:0.83rem; text-align:left; padding-left:10px; }
+    th.today-col-head { background:#e0f2fe !important; border-top:3px solid #0284c7 !important; border-bottom:3px solid #0284c7 !important; }
+    .today-badge { display:inline-block; border:2px solid #0284c7; background:#ffffff; color:#0369a1; border-radius:12px; padding:1px 6px; font-weight:800; box-shadow:0 1px 3px rgba(2,132,199,0.25); }
+    td.today-col { border-left:2px solid #0284c7 !important; border-right:2px solid #0284c7 !important; }
+    .cal-cell.today-cell { border:2px solid #0284c7 !important; background:#f0f9ff !important; }
+    .today-ring { border:2px solid #0284c7; background:#0284c7; color:#ffffff !important; border-radius:50%; width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; }
+    .page-view { display:none; } .page-view.active { display:block; }
+    .doctor-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; padding:8px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; align-items:center; }
+    .chip-btn { padding:6px 11px; font-size:0.82rem; font-weight:600; border-radius:20px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; cursor:pointer; transition:all 0.15s ease; user-select:none; }
+    .chip-btn:hover { background:#f1f5f9; }
+    .chip-btn.active { background:#0284c7; color:#ffffff; border-color:#0284c7; box-shadow:0 1px 3px rgba(2,132,199,0.25); }
+    .chip-action-btn { padding:5px 9px; font-size:0.76rem; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; cursor:pointer; transition:background 0.15s ease; }
+    .chip-action-btn:hover { background:#f1f5f9; }
+    .filter-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:12px; }
+    .filter-title { font-size:0.80rem; font-weight:700; color:#475569; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
+    .filter-chips { display:flex; flex-wrap:wrap; gap:5px; }
+    .filter-tag { padding:4px 8px; border-radius:5px; font-size:0.74rem; font-weight:600; cursor:pointer; border:1px solid #cbd5e1; opacity:0.40; transition:all 0.15s ease; user-select:none; }
+    .filter-tag.active { opacity:1; box-shadow:0 1px 2px rgba(0,0,0,0.06); border-color:transparent; }
+    .calendar-grid-wrapper { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:8px; border:1px solid #cbd5e1; }
+    .calendar-grid { display:grid; grid-template-columns:repeat(7, minmax(130px, 1fr)); background:#e2e8f0; gap:1px; min-width:910px; }
+    .cal-head { background:#f8fafc; color:#475569; font-weight:700; font-size:0.80rem; text-align:center; padding:8px 4px; text-transform:uppercase; border-bottom:2px solid #cbd5e1; }
+    .cal-cell { background:#ffffff; min-height:100px; padding:6px; display:flex; flex-direction:column; transition:background 0.1s; position:relative; }
+    .cal-cell.empty { background:#f8fafc; opacity:0.5; }
+    .cal-cell.weekend { background:#fafafa; }
+    .cal-cell.overlap-day { background:#fffbeb !important; border:2px solid #f59e0b; }
+    .cal-date-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+    .cal-date-num { font-size:0.86rem; font-weight:700; color:#475569; }
+    .overlap-pill { font-size:0.65rem; font-weight:800; background:#f59e0b; color:#ffffff; padding:1px 5px; border-radius:4px; letter-spacing:0.3px; }
+    .cell-item { display:inline-flex; align-items:center; justify-content:center; position:relative; }
+    .has-tooltip { cursor:help; border-bottom:1px dashed rgba(15, 23, 42, 0.4); }
+    .has-tooltip:hover::after { content:attr(data-tooltip); position:absolute; bottom:125%; left:50%; transform:translateX(-50%); background:#0f172a; color:#f8fafc; padding:5px 8px; border-radius:5px; font-size:0.74rem; font-weight:500; white-space:normal; width:max-content; max-width:170px; z-index:100; box-shadow:0 4px 6px -1px rgba(0,0,0,0.2); pointer-events:none; line-height:1.3; text-align:center; }
+    .has-tooltip:hover::before { content:""; position:absolute; bottom:105%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#0f172a; z-index:101; pointer-events:none; }
+    .note-icon { font-size:0.55rem; opacity:0.6; margin-left:2px; vertical-align:super; font-weight:500; }
+    .cal-events { display:flex; flex-direction:column; gap:4px; flex-grow:1; }
+    .cal-event { padding:4px 6px; border-radius:4px; font-size:0.75rem; font-weight:700; line-height:1.25; display:flex; justify-content:space-between; align-items:center; border-left:3px solid transparent; box-shadow:0 1px 2px rgba(0,0,0,0.03); position:relative; }
+    .c-hdv { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
+    .c-op10 { background:#fee2e2; color:#991b1b; border-color:#ef4444; }
+    .c-op21 { background:#e0f2fe; color:#075985; border-color:#0284c7; }
+    .c-op23 { background:#dbeafe; color:#1e40af; border-color:#3b82f6; }
+    .c-hopa { background:#ccfbf1; color:#115e59; border-color:#14b8a6; }
+    .c-hlaamb { background:#e7e5e4; color:#292524; border-color:#78716c; }
+    .c-fokus_mv { background:#f3e8ff; color:#6b21a8; border-color:#a855f7; }
+    .c-amb { background:#dcfce7; color:#166534; border-color:#22c55e; }
+    .c-hambl { background:#f1f5f9; color:#334155; border-color:#64748b; }
+    .c-heamb { background:#ffedd5; color:#9a3412; border-color:#f97316; }
+    .c-adm { background:#fef9c3; color:#854d0e; border-color:#eab308; }
+    .c-kursus { background:#e2e8f0; color:#334155; border-color:#94a3b8; }
+    .c-fri_ferie { background:#fce7f3; color:#9d174d; border-color:#ec4899; }
+    .c-syg { background:#fef9c3; color:#a16207; border-color:#eab308; }
+    .op-empty { padding:30px 16px; text-align:center; color:#64748b; font-size:0.90rem; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1; margin-top:10px; }
+    .loading-spinner { text-align:center; padding:50px 20px; font-weight:600; color:#0284c7; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-tab-bar">
+      <button id="tabBtnUge" class="tab-btn active" onclick="skiftSide('sideUgeskema')">📅 Ugeskema</button>
+      <button id="tabBtnOp" class="tab-btn" onclick="skiftSide('sideOpMaaned')">🔬 Måned (OP & Overlap)</button>
+      <button id="tabBtnIndividuel" class="tab-btn" onclick="skiftSide('sideIndividuel')">👤 Månedskalender individuel</button>
+    </div>
+
+    <!-- Side 1: Ugeskema -->
+    <div id="sideUgeskema" class="page-view active">
+      <div class="nav-bar">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button id="btnPrev" class="nav-btn" onclick="skiftUgeRelativt(-1)">&#171; Forrige</button>
+          <select id="weekDropdown" class="week-select" onchange="visUge(parseInt(this.value, 10))"></select>
+          <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>
+        </div>
+      </div>
+      <div id="dynamiskUgeContainer"><div class="loading-spinner">Henter seneste skema...</div></div>
+    </div>
+
+    <!-- Side 2: Måned (OP & Overlap) -->
+    <div id="sideOpMaaned" class="page-view">
+      <div class="header-box">
+        <h1 class="title">MÅNEDSKALENDER — OPERATIONSSTUER & OVERLAP</h1>
+        <div class="subtitle">Operationsstuer (OP10, OP21, OP22, OP23, HOPA og LA leje). Gule felter angiver overlap mellem valgte læger.</div>
+      </div>
+      <div class="nav-bar">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.86rem; font-weight:600; color:#475569;">Vælg måned:</span>
+          <select id="maanedSelect" class="week-select" onchange="opdaterOpVisning()"></select>
+        </div>
+        <div id="opStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 OP-vagter</div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+        <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg personer (klik for at tilføje/fjerne):</div>
+        <div style="display:flex; gap:5px;">
+          <button class="chip-action-btn" onclick="vaelgAlleLaeger(true)">Vælg alle</button>
+          <button class="chip-action-btn" onclick="vaelgAlleLaeger(false)">Nulstil</button>
+        </div>
+      </div>
+      <div id="doctorChipsContainer" class="doctor-chips"></div>
+      <div id="kalenderContainer"></div>
+    </div>
+
+    <!-- Side 3: Månedskalender Individuel -->
+    <div id="sideIndividuel" class="page-view">
+      <div class="header-box">
+        <h1 class="title">MÅNEDSKALENDER INDIVIDUEL</h1>
+        <div class="subtitle">Vælg en person og brug filtrene til at isolere funktioner. Hold musen over en funktion for at se noter.</div>
+      </div>
+      <div class="nav-bar">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.86rem; font-weight:600; color:#475569;">Vælg måned:</span>
+          <select id="maanedSelectIndividuel" class="week-select" onchange="opdaterIndividuelVisning()"></select>
+        </div>
+        <div id="indStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 funktioner</div>
+      </div>
+      <div style="font-size:0.82rem; font-weight:600; color:#64748b; margin-bottom:5px;">Vælg person:</div>
+      <div id="indDoctorChipsContainer" class="doctor-chips"></div>
+      <div class="filter-box">
+        <div class="filter-title">
+          <span>Filtrér funktioner:</span>
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button class="chip-action-btn" onclick="vaelgKunOpFunktioner()">🔬 Kun OP</button>
+            <button class="chip-action-btn" onclick="vaelgKunAmbFunktioner()">🏥 Kun ambulatorier</button>
+            <button class="chip-action-btn" onclick="toggleAlleFiltre(true)">Vælg alle</button>
+            <button class="chip-action-btn" onclick="toggleAlleFiltre(false)">Nulstil</button>
+          </div>
+        </div>
+        <div id="filterChipsContainer" class="filter-chips"></div>
+      </div>
+      <div id="individuelKalenderContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // Dit link er indsat direkte herunder:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxheYROZLPCScSAf4akAu1lfOjB2ExISxq7Bswh4_2Hmr1PTKMNmf127ty1QQUdY4h6lg/exec";
+
+    let appData = null;
+    let valgtUge = null;
+    let valgteLaeger = [];
+    let individuelValgtLaege = "";
+    let aktiveFunktionsFiltre = [];
+
+    const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
+    const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
+    const nuDato = new Date();
+    const iDagNummer = nuDato.getDate();
+    const iDagMaanedId = nuDato.getMonth() + 1;
+
+    async function hentSkemaData() {
+      const cached = localStorage.getItem("haandkirurgi_data");
+      if (cached) {
+        try {
+          appData = JSON.parse(cached);
+          initInterface();
+        } catch (e) {}
+      }
+
+      try {
+        const resp = await fetch(SCRIPT_URL + (SCRIPT_URL.includes("?") ? "&" : "?") + "format=json");
+        const json = await resp.json();
+        appData = json;
+        localStorage.setItem("haandkirurgi_data", JSON.stringify(json));
+        initInterface();
+      } catch (err) {
+        if (!cached) {
+          document.getElementById("dynamiskUgeContainer").innerHTML = "<div class='op-empty'>Kunne ikke hente skemadata. Tjek forbindelsen.</div>";
+        }
+      }
+    }
+
+    function initInterface() {
+      if (!appData) return;
+      valgtUge = appData.startUge;
+      valgteLaeger = appData.laeger.length > 0 ? [appData.laeger[0].navn] : [];
+      individuelValgtLaege = appData.laeger.length > 0 ? appData.laeger[0].navn : "";
+      aktiveFunktionsFiltre = appData.layoutKategorier.map(k => k.id).filter(id => id !== 'fri_ferie');
+
+      const wSelect = document.getElementById("weekDropdown");
+      wSelect.innerHTML = appData.alleUger.map(u => `<option value="${u}">Uge ${u} ${u === appData.aktueltUgeNrIDag ? '(I dag)' : ''}</option>`).join("");
+      wSelect.value = valgtUge;
+
+      const mOptions = Object.keys(appData.fundneMaaneder).map(mId => {
+        const sel = (parseInt(mId, 10) === appData.aktivMaanedId) ? ' selected' : '';
+        return `<option value="${mId}"${sel}>${appData.fundneMaaneder[mId]}</option>`;
+      }).join("");
+      document.getElementById("maanedSelect").innerHTML = mOptions;
+      document.getElementById("maanedSelectIndividuel").innerHTML = mOptions;
+
+      document.getElementById("doctorChipsContainer").innerHTML = appData.laeger.map((l, i) => {
+        const active = (i === 0) ? ' active' : '';
+        return `<button class="chip-btn${active}" data-navn="${l.navn}" onclick="toggleLaege('${l.navn}', this)">${l.navn}</button>`;
+      }).join("");
+
+      document.getElementById("indDoctorChipsContainer").innerHTML = appData.laeger.map((l, i) => {
+        const active = (i === 0) ? ' active' : '';
+        return `<button class="chip-btn ind-laege-chip${active}" data-navn="${l.navn}" onclick="vaelgIndividuelLaege('${l.navn}', this)">${l.navn}</button>`;
+      }).join("");
+
+      let fChipsHtml = appData.layoutKategorier.map(k => {
+        const active = (k.id !== 'fri_ferie') ? ' active' : '';
+        return `<span id="ftag_${k.id}" class="filter-tag c-${k.badgeClass}${active}" data-katid="${k.id}" onclick="toggleFunktionsFilter('${k.id}', this)">${k.titel}</span>`;
+      }).join("");
+      fChipsHtml += `<span id="ftag_syg" class="filter-tag c-syg" data-katid="syg" onclick="toggleFunktionsFilter('syg', this)">Sygdom</span>`;
+      document.getElementById("filterChipsContainer").innerHTML = fChipsHtml;
+
+      visUge(valgtUge);
+    }
+
+    function skiftSide(sideId) {
+      document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById(sideId).classList.add("active");
+      if (sideId === "sideUgeskema") {
+        document.getElementById("tabBtnUge").classList.add("active");
+      } else if (sideId === "sideOpMaaned") {
+        document.getElementById("tabBtnOp").classList.add("active");
+        opdaterOpVisning();
+      } else if (sideId === "sideIndividuel") {
+        document.getElementById("tabBtnIndividuel").classList.add("active");
+        opdaterIndividuelVisning();
+      }
+    }
+
+    function bygUgeTabelHtml(uNr) {
+      const uData = appData.ugerData[uNr];
+      if (!uData) return "";
+      const dage = uData.dage;
+      const matrix = uData.matrix;
+      const maanedStr = uData.maaneder.join(" / ");
+      let datoPeriodeTekst = "Uge " + uNr;
+      if (dage.length > 0) {
+        datoPeriodeTekst += "  |  " + dage[0].ugedag + " d. " + dage[0].dato + " — " + dage[dage.length - 1].ugedag + " d. " + dage[dage.length - 1].dato;
+      }
+
+      let out = `<div class="header-box"><h1 class="title">HÅNDKIRURGISK SEKTION — SLAGELSE SYGEHUS</h1><div class="subtitle"><span class="month-badge">📅 ${maanedStr}</span><span>${datoPeriodeTekst} &nbsp;(Live opdateret)</span></div></div>`;
+      out += `<div class="table-wrapper"><table><thead><tr><th class="col-funktion">FUNKTION</th>`;
+      dage.forEach(d => {
+        const erIDag = (d.dato === iDagNummer && d.maanedId === iDagMaanedId);
+        const thCls = erIDag ? " class='today-col-head'" : "";
+        const datoTekst = erIDag ? `<span class='today-badge'>${d.dato}</span>` : d.dato;
+        out += `<th${thCls}>${d.ugedag.toUpperCase()}<br>${datoTekst}</th>`;
+      });
+      out += `</tr></thead><tbody>`;
+
+      appData.layoutKategorier.forEach(kat => {
+        out += `<tr><td class="col-funktion" style="background-color:${kat.titelBg}; color:${appData.tekstFarveMork};">${kat.titel}</td>`;
+        for (let d = 0; d < dage.length; d++) {
+          const isWeekend = dage[d].erWeekend;
+          const erIDag = (dage[d].dato === iDagNummer && dage[d].maanedId === iDagMaanedId);
+          const tdCls = erIDag ? " class='today-col'" : "";
+          const personer = matrix[kat.id][d] || [];
+          if (personer.length > 0) {
+            const personerHtml = personer.map(p => {
+              if (p.note && p.note.trim() !== "") {
+                const safeNote = p.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+                return `<span class="cell-item has-tooltip" data-tooltip="${safeNote}">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
+              }
+              return `<span class="cell-item">${p.tekst}</span>`;
+            }).join("<br>");
+            const bg = isWeekend ? appData.fastHwFarve : kat.hverdagBg;
+            out += `<td${tdCls} style="background-color:${bg}; color:${appData.tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
+          } else {
+            const tomBg = isWeekend ? "#f1f5f9" : kat.hverdagBg;
+            out += `<td${tdCls} style="background-color:${tomBg};"></td>`;
+          }
+        }
+        out += `</tr>`;
+      });
+      out += `</tbody></table></div>`;
+      return out;
+    }
+
+    function visUge(ugeNr) {
+      valgtUge = ugeNr;
+      document.getElementById("dynamiskUgeContainer").innerHTML = bygUgeTabelHtml(ugeNr);
+      document.getElementById("weekDropdown").value = ugeNr;
+      const idx = appData.alleUger.indexOf(ugeNr);
+      document.getElementById("btnPrev").classList.toggle("disabled", idx <= 0);
+      document.getElementById("btnNext").classList.toggle("disabled", idx >= appData.alleUger.length - 1);
+    }
+
+    function skiftUgeRelativt(retning) {
+      const idx = appData.alleUger.indexOf(valgtUge);
+      const nyIdx = idx + retning;
+      if (nyIdx >= 0 && nyIdx < appData.alleUger.length) visUge(appData.alleUger[nyIdx]);
+    }
+
+    function toggleLaege(navn, btn) {
+      const pos = valgteLaeger.indexOf(navn);
+      if (pos !== -1) {
+        valgteLaeger.splice(pos, 1);
+        btn.classList.remove("active");
+      } else {
+        valgteLaeger.push(navn);
+        btn.classList.add("active");
+      }
+      opdaterOpVisning();
+    }
+
+    function vaelgAlleLaeger(val) {
+      valgteLaeger = [];
+      document.querySelectorAll("#sideOpMaaned .chip-btn").forEach(btn => {
+        if (val) {
+          valgteLaeger.push(btn.getAttribute("data-navn"));
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+      opdaterOpVisning();
+    }
+
+    function opdaterOpVisning() {
+      const mId = parseInt(document.getElementById("maanedSelect").value, 10);
+      const container = document.getElementById("kalenderContainer");
+      if (valgteLaeger.length === 0) {
+        container.innerHTML = "<div class='op-empty'>Vælg mindst én person ovenfor for at se månedskalenderen.</div>";
+        document.getElementById("opStatusBadge").innerText = "0 valgt";
+        return;
+      }
+      const filtreret = appData.alleOpDage.filter(item => item.maanedId === mId && valgteLaeger.includes(item.laege));
+      document.getElementById("opStatusBadge").innerText = filtreret.length + " OP-vagt" + (filtreret.length === 1 ? "" : "er");
+      const posterPrDato = {};
+      filtreret.forEach(item => {
+        if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];
+        posterPrDato[item.dato].push(item);
+      });
+      container.innerHTML = bygKalenderHtml(mId, posterPrDato, true);
+    }
+
+    function vaelgIndividuelLaege(navn, btn) {
+      individuelValgtLaege = navn;
+      document.querySelectorAll(".ind-laege-chip").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      opdaterIndividuelVisning();
+    }
+
+    function toggleFunktionsFilter(katId, el) {
+      const idx = aktiveFunktionsFiltre.indexOf(katId);
+      if (idx !== -1) {
+        aktiveFunktionsFiltre.splice(idx, 1);
+        el.classList.remove("active");
+      } else {
+        aktiveFunktionsFiltre.push(katId);
+        el.classList.add("active");
+      }
+      opdaterIndividuelVisning();
+    }
+
+    function toggleAlleFiltre(val) {
+      aktiveFunktionsFiltre = [];
+      document.querySelectorAll(".filter-tag").forEach(tag => {
+        const kId = tag.getAttribute("data-katid");
+        if (val) {
+          aktiveFunktionsFiltre.push(kId);
+          tag.classList.add("active");
+        } else {
+          tag.classList.remove("active");
+        }
+      });
+      opdaterIndividuelVisning();
+    }
+
+    function vaelgKunOpFunktioner() {
+      aktiveFunktionsFiltre = opKatIds.slice();
+      document.querySelectorAll(".filter-tag").forEach(tag => {
+        const kId = tag.getAttribute("data-katid");
+        tag.classList.toggle("active", opKatIds.includes(kId));
+      });
+      opdaterIndividuelVisning();
+    }
+
+    function vaelgKunAmbFunktioner() {
+      aktiveFunktionsFiltre = ambKatIds.slice();
+      document.querySelectorAll(".filter-tag").forEach(tag => {
+        const kId = tag.getAttribute("data-katid");
+        tag.classList.toggle("active", ambKatIds.includes(kId));
+      });
+      opdaterIndividuelVisning();
+    }
+
+    function opdaterIndividuelVisning() {
+      const mId = parseInt(document.getElementById("maanedSelectIndividuel").value, 10);
+      const container = document.getElementById("individuelKalenderContainer");
+      if (!individuelValgtLaege) {
+        container.innerHTML = "<div class='op-empty'>Vælg en person ovenfor.</div>";
+        return;
+      }
+      const filtreret = appData.alleIndividuelleVagter.filter(item => item.maanedId === mId && item.laege.toLowerCase() === individuelValgtLaege.toLowerCase() && aktiveFunktionsFiltre.includes(item.katId));
+      document.getElementById("indStatusBadge").innerText = filtreret.length + " funktion" + (filtreret.length === 1 ? "" : "er");
+      const posterPrDato = {};
+      filtreret.forEach(item => {
+        if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];
+        posterPrDato[item.dato].push(item);
+      });
+      container.innerHTML = bygKalenderHtml(mId, posterPrDato, false);
+    }
+
+    function bygKalenderHtml(mId, posterPrDato, erOverlapSide) {
+      const aar = (new Date()).getFullYear();
+      const dFoerste = new Date(aar, mId - 1, 1);
+      const dageIMaaned = new Date(aar, mId, 0).getDate();
+      const startUgedag = (dFoerste.getDay() + 6) % 7;
+      let out = "<div class='calendar-grid-wrapper'><div class='calendar-grid'>";
+      const ugenavne = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+      ugenavne.forEach(ug => out += `<div class='cal-head'>${ug}</div>`);
+      for (let f = 0; f < startUgedag; f++) out += "<div class='cal-cell empty'></div>";
+
+      for (let dag = 1; dag <= dageIMaaned; dag++) {
+        const curDagIndex = (startUgedag + dag - 1) % 7;
+        const erWeekendDag = (curDagIndex === 5 || curDagIndex === 6);
+        const erIDag = (dag === iDagNummer && mId === iDagMaanedId);
+        const muligeEvents = posterPrDato[dag] || [];
+        const events = muligeEvents.filter(e => e.erWeekend === erWeekendDag);
+        const unikkeLaeger = [...new Set(events.map(e => e.laege))];
+        const erOverlap = erOverlapSide && (unikkeLaeger.length > 1);
+
+        let cellKlasse = "cal-cell";
+        if (erWeekendDag) cellKlasse += " weekend";
+        if (erOverlap) cellKlasse += " overlap-day";
+        if (erIDag) cellKlasse += " today-cell";
+
+        out += `<div class="${cellKlasse}"><div class='cal-date-bar'>`;
+        out += erIDag ? `<span class='cal-date-num today-ring'>${dag}</span>` : `<span class='cal-date-num'>${dag}</span>`;
+        if (erOverlap) out += `<span class='overlap-pill'>⚡ OVERLAP</span>`;
+        out += `</div><div class='cal-events'>`;
+
+        events.forEach(e => {
+          const labelTekst = erOverlapSide ? e.opType : e.label;
+          const personTekst = erOverlapSide ? e.laege : "";
+          let katKlasse = "c-" + (e.katId ? e.katId : "op10");
+          if (erOverlapSide) {
+            const t = e.opType.toLowerCase();
+            if (t.includes("op21") || t.includes("op22")) katKlasse = "c-op21";
+            else if (t.includes("op23")) katKlasse = "c-op23";
+            else if (t.includes("hopa")) katKlasse = "c-hopa";
+            else if (t.includes("la leje") || t.includes("hlaamb")) katKlasse = "c-hlaamb";
+            else katKlasse = "c-op10";
+          }
+          const harNote = (e.note && e.note.trim() !== "");
+          const tooltipAttr = harNote ? ` data-tooltip="${e.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;")}"` : "";
+          const tooltipKlasse = harNote ? " has-tooltip" : "";
+
+          out += `<div class='cal-event ${katKlasse}${tooltipKlasse}'${tooltipAttr}>`;
+          out += `<span>${labelTekst}${harNote && !erOverlapSide ? " <span class='note-icon'>ⓘ</span>" : ""}</span>`;
+          if (personTekst) out += `<span>${personTekst}</span>`;
+          out += `</div>`;
+        });
+        out += `</div></div>`;
+      }
+      const totalCeller = startUgedag + dageIMaaned;
+      const rest = (7 - (totalCeller % 7)) % 7;
+      for (let r = 0; r < rest; r++) out += "<div class='cal-cell empty'></div>";
+      out += "</div></div>";
+      return out;
+    }
+
+    hentSkemaData();
+  </script>
+</body>
+</html>
