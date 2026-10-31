@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Håndkirurgi">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0284c7">
+  <meta name="theme-color" content="#059669">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 12px; color: #0f172a; -webkit-tap-highlight-color: transparent; }
@@ -17,24 +17,31 @@
     .main-tab-bar { display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; flex-wrap: wrap; }
     .tab-btn { flex: 1; min-width: 140px; padding: 9px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; text-align: center; transition: all 0.15s ease; }
     .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-    .tab-btn.active { background: #e0f2fe; color: #0369a1; border-color: #38bdf8; font-weight: 700; box-shadow: 0 1px 3px rgba(2,132,199,0.15); }
+    .tab-btn.active { background: #d1fae5; color: #065f46; border-color: #059669; font-weight: 700; box-shadow: 0 1px 3px rgba(5,150,105,0.15); }
 
     .nav-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #f8fafc; padding: 9px 12px; border-radius: 8px; border: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px; }
-    .nav-btn { display: inline-flex; align-items: center; justify-content: center; background: #0284c7; color: #ffffff; padding: 7px 13px; font-size: 0.84rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: background 0.15s ease; }
-    .nav-btn:hover:not(.disabled) { background: #0369a1; }
+    .nav-btn { display: inline-flex; align-items: center; justify-content: center; background: #059669; color: #ffffff; padding: 7px 13px; font-size: 0.84rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: background 0.15s ease; }
+    .nav-btn:hover:not(.disabled) { background: #047857; }
     .nav-btn.disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
     .week-select { font-size: 0.88rem; font-weight: 600; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; cursor: pointer; }
     
     .header-box { margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
     .title { font-size: 1.12rem; font-weight: 700; color: #0f172a; margin: 0; }
     .subtitle { font-size: 0.82rem; color: #64748b; margin-top: 4px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .month-badge { display: inline-flex; align-items: center; background: #e0e7fe; color: #0369a1; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #bae6fd; }
+    .month-badge { display: inline-flex; align-items: center; background: #d1fae5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0; }
 
     .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; border: 1px solid #cbd5e1; }
     table { border-collapse: collapse; width: 100%; min-width: 760px; text-align: center; }
     th, td { border: 1px solid #94a3b8; padding: 8px 5px; font-size: 0.82rem; vertical-align: middle; line-height: 1.35; color: #0f172a; }
     th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }
     td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }
+
+    /* DAGS DATO MARKERING (RING & KOLONNE) */
+    th.today-col-head { background: #d1fae5 !important; border-top: 3px solid #059669 !important; border-bottom: 3px solid #059669 !important; }
+    .today-badge { display: inline-block; border: 2px solid #059669; background: #059669; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(5,150,105,0.3); }
+    td.today-col { border-left: 2px solid #059669 !important; border-right: 2px solid #059669 !important; }
+    .cal-cell.today-cell { border: 2px solid #059669 !important; background: #ecfdf5 !important; }
+    .today-ring { border: 2px solid #059669; background: #059669; color: #ffffff !important; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
     
     .page-view { display: none; }
     .page-view.active { display: block; }
@@ -42,10 +49,10 @@
     .doctor-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; }
     .chip-btn { padding: 6px 11px; font-size: 0.82rem; font-weight: 600; border-radius: 20px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: all 0.15s ease; user-select: none; }
     .chip-btn:hover { background: #f1f5f9; }
-    .chip-btn.active { background: #0284c7; color: #ffffff; border-color: #0284c7; box-shadow: 0 1px 3px rgba(2,132,199,0.25); }
+    .chip-btn.active { background: #059669; color: #ffffff; border-color: #059669; box-shadow: 0 1px 3px rgba(5,150,105,0.25); }
     .chip-action-btn { padding: 5px 9px; font-size: 0.76rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: background 0.15s ease; }
     .chip-action-btn:hover { background: #f1f5f9; }
-    .btn-ical { background: #0284c7 !important; color: #ffffff !important; border: none !important; font-weight: 600 !important; }
+    .btn-ical { background: #059669 !important; color: #ffffff !important; border: none !important; font-weight: 600 !important; }
 
     .filter-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
     .filter-title { font-size: 0.80rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -97,11 +104,8 @@
     .c-syg { background: #fef9c3; color: #a16207; border-color: #eab308; }
 
     .op-empty { padding: 30px 16px; text-align: center; color: #64748b; font-size: 0.90rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 10px; }
-    #loadingBox { padding: 40px 20px; text-align: center; font-weight: 600; color: #0369a1; }
+    #loadingBox { padding: 40px 20px; text-align: center; font-weight: 600; color: #065f46; }
 
-    /* =========================================================
-       MOBILOPTIMERING
-       ========================================================= */
     @media screen and (max-width: 640px) {
       body { padding: 6px !important; }
       .container { padding: 8px !important; border-radius: 8px !important; }
@@ -157,7 +161,7 @@
         <span style="font-size:0.86rem; font-weight:600; color:#475569;">Vælg måned:</span>
         <select id="maanedSelect" class="week-select" onchange="opdaterOpVisning()"></select>
       </div>
-      <div id="opStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 OP-vagter</div>
+      <div id="opStatusBadge" style="font-size:0.82rem; font-weight:700; background:#d1fae5; color:#065f46; padding:5px 12px; border-radius:20px; border:1px solid #a7f3d0;">0 OP-vagter</div>
     </div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
       <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg personer (klik for at tilføje/fjerne):</div>
@@ -183,7 +187,7 @@
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="chip-action-btn btn-ical" onclick="aabnIcalModal()">📲 Få kalender-link</button>
-        <div id="indStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 funktioner</div>
+        <div id="indStatusBadge" style="font-size:0.82rem; font-weight:700; background:#d1fae5; color:#065f46; padding:5px 12px; border-radius:20px; border:1px solid #a7f3d0;">0 funktioner</div>
       </div>
     </div>
     <div style="font-size:0.82rem; font-weight:600; color:#64748b; margin-bottom:5px;">Vælg person:</div>
@@ -282,6 +286,10 @@
   let valgteLaeger = [];
   let individuelValgtLaege = "";
   let aktiveFunktionsFiltre = [];
+
+  const nuDato = new Date();
+  const iDagNummer = nuDato.getDate();
+  const iDagMaanedId = nuDato.getMonth() + 1;
 
   const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
   const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
@@ -391,7 +399,10 @@
     <div class="table-wrapper"><table><thead><tr><th class="col-funktion">FUNKTION</th>`;
 
     dage.forEach(d => {
-      out += `<th>${d.ugedag.toUpperCase()}<br>${d.dato}</th>`;
+      const erIDag = (d.dato === iDagNummer && d.maanedId === iDagMaanedId);
+      const thCls = erIDag ? ` class="today-col-head"` : "";
+      const datoTekst = erIDag ? `<span class="today-badge">${d.dato}</span>` : d.dato;
+      out += `<th${thCls}>${d.ugedag.toUpperCase()}<br>${datoTekst}</th>`;
     });
     out += `</tr></thead><tbody>`;
 
@@ -399,6 +410,8 @@
       out += `<tr><td class="col-funktion" style="background-color:${kat.titelBg}; color:${tekstFarveMork};">${kat.titel}</td>`;
       for (let d = 0; d < dage.length; d++) {
         const isWeekend = dage[d].erWeekend;
+        const erIDag = (dage[d].dato === iDagNummer && dage[d].maanedId === iDagMaanedId);
+        const tdCls = erIDag ? ` class="today-col"` : "";
         const personer = matrix[kat.id][d] || [];
         if (personer.length > 0) {
           const personerHtml = personer.map(p => {
@@ -410,10 +423,10 @@
             return `<span class="cell-item">${p.tekst}</span>`;
           }).join("<br>");
           const bg = isWeekend ? fastHwFarve : kat.hverdagBg;
-          out += `<td style="background-color:${bg}; color:${tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
+          out += `<td${tdCls} style="background-color:${bg}; color:${tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
         } else {
           const emptyBg = isWeekend ? "#f1f5f9" : kat.hverdagBg;
-          out += `<td style="background-color:${emptyBg};"></td>`;
+          out += `<td${tdCls} style="background-color:${emptyBg};"></td>`;
         }
       }
       out += `</tr>`;
@@ -599,6 +612,7 @@
     for (let dag = 1; dag <= dageIMaaned; dag++) {
       const curDagIndex = (startUgedag + dag - 1) % 7;
       const erWeekendDag = (curDagIndex === 5 || curDagIndex === 6);
+      const erIDag = (dag === iDagNummer && mId === iDagMaanedId);
       const muligeEvents = posterPrDato[dag] || [];
       const events = muligeEvents.filter(e => e.erWeekend === erWeekendDag);
 
@@ -611,10 +625,15 @@
       let cellKlasse = "cal-cell";
       if (erWeekendDag) cellKlasse += " weekend";
       if (erOverlap) cellKlasse += " overlap-day";
+      if (erIDag) cellKlasse += " today-cell";
+
+      const dagNummerHtml = erIDag 
+        ? `<span class="cal-date-num today-ring">${dag}</span>` 
+        : `<span class="cal-date-num">${dag}</span>`;
 
       out += `<div class="${cellKlasse}">
         <div class="cal-date-bar">
-          <span class="cal-date-num">${dag}</span>
+          ${dagNummerHtml}
           ${erOverlap ? `<span class="overlap-pill">⚡ OVERLAP</span>` : ""}
         </div>
         <div class="cal-events">`;
