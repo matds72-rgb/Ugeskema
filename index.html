@@ -326,65 +326,100 @@
   const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
   const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
 
+  // Indlæser skemadata i variablerne og opdaterer skærmen
+  function anvendSkemaData(data, erOpdatering) {
+    ugerData = data.ugerData || {};
+    alleUger = data.alleUger || [];
+    layoutKategorier = data.layoutKategorier || [];
+    fastHwFarve = data.fastHwFarve || "#c4b5fd";
+    tekstFarveMork = data.tekstFarveMork || "#0f172a";
+    alleOpDage = data.alleOpDage || [];
+    alleIndividuelleVagter = data.alleIndividuelleVagter || [];
+    fundneMaaneder = data.fundneMaaneder || {};
+    laeger = data.laeger || [];
+
+    aktueltUgeNrServer = data.aktueltUgeNr || alleUger[0];
+    if (!erOpdatering || !valgtUge || alleUger.indexOf(valgtUge) === -1) {
+      valgtUge = alleUger.indexOf(aktueltUgeNrServer) !== -1 ? aktueltUgeNrServer : alleUger[0];
+    }
+
+    const alleNavne = laeger.map(l => l.navn);
+
+    // Hent gemt person fra localStorage ved første opstart
+    if (!erOpdatering) {
+      try {
+        const gemtInd = localStorage.getItem("hk_individuelLaege");
+        if (gemtInd && alleNavne.indexOf(gemtInd) !== -1) {
+          individuelValgtLaege = gemtInd;
+        } else if (laeger.length > 0) {
+          individuelValgtLaege = laeger[0].navn;
+        }
+
+        const gemtOp = JSON.parse(localStorage.getItem("hk_valgteLaeger") || "null");
+        if (Array.isArray(gemtOp)) {
+          valgteLaeger = gemtOp.filter(n => alleNavne.indexOf(n) !== -1);
+        }
+        if (valgteLaeger.length === 0 && laeger.length > 0) {
+          valgteLaeger = [individuelValgtLaege || laeger[0].navn];
+        }
+      } catch (e) {
+        if (laeger.length > 0) {
+          valgteLaeger = [laeger[0].navn];
+          individuelValgtLaege = laeger[0].navn;
+        }
+      }
+
+      aktiveFunktionsFiltre = layoutKategorier
+        .map(k => k.id)
+        .filter(id => id !== "fri_ferie");
+    }
+
+    initBrugerflade(aktueltUgeNrServer, erOpdatering);
+    document.getElementById("loadingBox").style.display = "none";
+    skiftSide(aktivSide);
+    visUge(valgtUge);
+  }
+
+  // Lynhurtig Cache-First hentning
   async function hentSkemaData(erGenindlaesning) {
     const btnRef = document.getElementById("btnRefresh");
     if (btnRef) btnRef.innerText = "⏳ Henter...";
+
+    const CACHE_KEY = "hk_skemaData_cache";
+    let harVistFraCache = false;
+
+    // 1. Vis straks data fra browserens lokale hukommelse (0,05 sekunder)
+    if (!erGenindlaesning) {
+      try {
+        const cachedRaw = localStorage.getItem(CACHE_KEY);
+        if (cachedRaw) {
+          const cachedData = JSON.parse(cachedRaw);
+          anvendSkemaData(cachedData, false);
+          harVistFraCache = true;
+        }
+      } catch (e) {
+        console.warn("Kunne ikke læse cache:", e);
+      }
+    }
+
+    // 2. Hent de nyeste data i baggrunden fra Google Sheets
     try {
       const resp = await fetch(SCRIPT_URL + "?format=json&t=" + Date.now());
-      const data = await resp.json();
+      if (!resp.ok) throw new Error("Netværksfejl (" + resp.status + ")");
+      const friskData = await resp.json();
 
-      ugerData = data.ugerData || {};
-      alleUger = data.alleUger || [];
-      layoutKategorier = data.layoutKategorier || [];
-      fastHwFarve = data.fastHwFarve || "#c4b5fd";
-      tekstFarveMork = data.tekstFarveMork || "#0f172a";
-      alleOpDage = data.alleOpDage || [];
-      alleIndividuelleVagter = data.alleIndividuelleVagter || [];
-      fundneMaaneder = data.fundneMaaneder || {};
-      laeger = data.laeger || [];
+      // Gem de nyeste data i cachen til næste besøg
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(friskData));
+      } catch (e) {}
 
-      aktueltUgeNrServer = data.aktueltUgeNr || alleUger[0];
-      if (!erGenindlaesning || !valgtUge || alleUger.indexOf(valgtUge) === -1) {
-        valgtUge = alleUger.indexOf(aktueltUgeNrServer) !== -1 ? aktueltUgeNrServer : alleUger[0];
-      }
-
-      const alleNavne = laeger.map(l => l.navn);
-
-      // Hent gemt person fra localStorage
-      if (!erGenindlaesning) {
-        try {
-          const gemtInd = localStorage.getItem("hk_individuelLaege");
-          if (gemtInd && alleNavne.indexOf(gemtInd) !== -1) {
-            individuelValgtLaege = gemtInd;
-          } else if (laeger.length > 0) {
-            individuelValgtLaege = laeger[0].navn;
-          }
-
-          const gemtOp = JSON.parse(localStorage.getItem("hk_valgteLaeger") || "null");
-          if (Array.isArray(gemtOp)) {
-            valgteLaeger = gemtOp.filter(n => alleNavne.indexOf(n) !== -1);
-          }
-          if (valgteLaeger.length === 0 && laeger.length > 0) {
-            valgteLaeger = [individuelValgtLaege || laeger[0].navn];
-          }
-        } catch (e) {
-          if (laeger.length > 0) {
-            valgteLaeger = [laeger[0].navn];
-            individuelValgtLaege = laeger[0].navn;
-          }
-        }
-
-        aktiveFunktionsFiltre = layoutKategorier
-          .map(k => k.id)
-          .filter(id => id !== "fri_ferie");
-      }
-
-      initBrugerflade(aktueltUgeNrServer, erGenindlaesning);
-      document.getElementById("loadingBox").style.display = "none";
-      skiftSide(aktivSide);
-      visUge(valgtUge);
+      // Opdater skærmen diskret med de nye data
+      anvendSkemaData(friskData, harVistFraCache || erGenindlaesning);
     } catch (err) {
-      document.getElementById("loadingBox").innerText = "Fejl ved hentning af skema: " + err;
+      console.error("Fejl ved hentning af skema:", err);
+      if (!harVistFraCache) {
+        document.getElementById("loadingBox").innerText = "Fejl ved hentning af skema: " + err;
+      }
     } finally {
       if (btnRef) btnRef.innerText = "🔄 Opdater";
     }
@@ -864,6 +899,7 @@
     return out;
   }
 
+  // Første kørsel ved sideindlæsning
   hentSkemaData(false);
 </script>
 </body>
