@@ -41,7 +41,7 @@
     th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }
     td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }
 
-    /* DAGS DATO MARKERING (RING & KOLONNE) */
+    /* DAGS DATO MARKERING */
     th.today-col-head { background: #d1fae5 !important; border-top: 3px solid #059669 !important; border-bottom: 3px solid #059669 !important; }
     .today-badge { display: inline-block; border: 2px solid #059669; background: #059669; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(5,150,105,0.3); }
     td.today-col { border-left: 2px solid #059669 !important; border-right: 2px solid #059669 !important; }
@@ -85,10 +85,23 @@
     .has-tooltip:hover::before { content: ""; position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0f172a; z-index: 101; pointer-events: none; }
     .note-icon { font-size: 0.55rem; opacity: 0.6; margin-left: 2px; vertical-align: super; font-weight: 500; }
 
+    /* FREMHÆV VALGT LÆGE PÅ SIDE 1 (LYSENDE RING & FARVE) */
+    .cell-item.highlight-doc {
+      background: #fef08a !important;
+      color: #0f172a !important;
+      border: 2px solid #ca8a04 !important;
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-weight: 800 !important;
+      box-shadow: 0 0 8px rgba(234, 179, 8, 0.7), 0 1px 3px rgba(0,0,0,0.15);
+      display: inline-block;
+      margin: 1px 0;
+    }
+
     .cal-events { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
     .cal-event { padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; line-height: 1.25; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.03); position: relative; }
 
-    /* Note Toast på mobil & desktop */
+    /* Note Toast */
     #noteToast { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #ffffff; padding: 12px 16px; border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 10000; max-width: 90vw; width: 340px; font-size: 0.84rem; line-height: 1.4; border: 1px solid #334155; }
     .toast-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; font-size: 0.80rem; }
     .toast-close { background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
@@ -162,7 +175,10 @@
         <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>
         <button class="nav-btn-today" onclick="hopTilAktuelUge()">📍 I dag</button>
       </div>
-      <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
+      <div class="nav-group">
+        <select id="highlightDoctorSelect" class="week-select" onchange="skiftFremhaevetLaege(this.value)"></select>
+        <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
+      </div>
     </div>
     <div id="dynamiskUgeContainer"></div>
   </div>
@@ -229,7 +245,7 @@
   </div>
 </div>
 
-<!-- Svævende Note-boks til mobil og desktop -->
+<!-- Svævende Note-boks -->
 <div id="noteToast" onclick="lukNoteToast()">
   <div class="toast-header">
     <span id="noteToastTitle">Bemærkning</span>
@@ -316,6 +332,7 @@
   let aktueltUgeNrServer = null;
   let valgteLaeger = [];
   let individuelValgtLaege = "";
+  let fremhaevetLaege = "";
   let aktiveFunktionsFiltre = [];
   let aktivSide = "sideUgeskema";
 
@@ -326,7 +343,6 @@
   const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
   const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
 
-  // Indlæser skemadata i variablerne og opdaterer skærmen
   function anvendSkemaData(data, erOpdatering) {
     ugerData = data.ugerData || {};
     alleUger = data.alleUger || [];
@@ -345,7 +361,6 @@
 
     const alleNavne = laeger.map(l => l.navn);
 
-    // Hent gemt person fra localStorage ved første opstart
     if (!erOpdatering) {
       try {
         const gemtInd = localStorage.getItem("hk_individuelLaege");
@@ -353,6 +368,11 @@
           individuelValgtLaege = gemtInd;
         } else if (laeger.length > 0) {
           individuelValgtLaege = laeger[0].navn;
+        }
+
+        const gemtHl = localStorage.getItem("hk_fremhaevetLaege");
+        if (gemtHl !== null && (gemtHl === "" || alleNavne.indexOf(gemtHl) !== -1)) {
+          fremhaevetLaege = gemtHl;
         }
 
         const gemtOp = JSON.parse(localStorage.getItem("hk_valgteLaeger") || "null");
@@ -380,7 +400,6 @@
     visUge(valgtUge);
   }
 
-  // Lynhurtig Cache-First hentning
   async function hentSkemaData(erGenindlaesning) {
     const btnRef = document.getElementById("btnRefresh");
     if (btnRef) btnRef.innerText = "⏳ Henter...";
@@ -388,7 +407,6 @@
     const CACHE_KEY = "hk_skemaData_cache";
     let harVistFraCache = false;
 
-    // 1. Vis straks data fra browserens lokale hukommelse (0,05 sekunder)
     if (!erGenindlaesning) {
       try {
         const cachedRaw = localStorage.getItem(CACHE_KEY);
@@ -402,18 +420,15 @@
       }
     }
 
-    // 2. Hent de nyeste data i baggrunden fra Google Sheets
     try {
       const resp = await fetch(SCRIPT_URL + "?format=json&t=" + Date.now());
       if (!resp.ok) throw new Error("Netværksfejl (" + resp.status + ")");
       const friskData = await resp.json();
 
-      // Gem de nyeste data i cachen til næste besøg
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify(friskData));
       } catch (e) {}
 
-      // Opdater skærmen diskret med de nye data
       anvendSkemaData(friskData, harVistFraCache || erGenindlaesning);
     } catch (err) {
       console.error("Fejl ved hentning af skema:", err);
@@ -434,6 +449,17 @@
     weekDrop.innerHTML = alleUger.map(u => 
       `<option value="${u}">Uge ${u}${u === aktueltUgeNr ? " (I dag)" : ""}</option>`
     ).join("");
+
+    // Dropdown til fremhævning af læge på Side 1
+    const hlSelect = document.getElementById("highlightDoctorSelect");
+    if (hlSelect) {
+      let hlHtml = '<option value="">👤 Fremhæv læge: Ingen</option>';
+      laeger.forEach(l => {
+        const sel = (l.navn.toLowerCase() === fremhaevetLaege.toLowerCase()) ? " selected" : "";
+        hlHtml += `<option value="${l.navn}"${sel}>👤 Fremhæv: ${l.navn}</option>`;
+      });
+      hlSelect.innerHTML = hlHtml;
+    }
 
     const mSelectOp = document.getElementById("maanedSelect");
     const mSelectInd = document.getElementById("maanedSelectIndividuel");
@@ -474,6 +500,14 @@
       filterHtml += `<span id="ftag_syg" class="filter-tag c-syg" data-katid="syg" onclick="toggleFunktionsFilter('syg', this)">Sygdom</span>`;
       document.getElementById("filterChipsContainer").innerHTML = filterHtml;
     }
+  }
+
+  function skiftFremhaevetLaege(navn) {
+    fremhaevetLaege = navn;
+    try {
+      localStorage.setItem("hk_fremhaevetLaege", navn);
+    } catch (e) {}
+    visUge(valgtUge);
   }
 
   function skiftSide(sideId) {
@@ -557,16 +591,12 @@
     const dage = uData.dage;
     const matrix = uData.matrix;
     const maanedStr = uData.maaneder.join(" / ");
-    let datoPeriodeTekst = "Uge " + ugeNr;
-    if (dage.length > 0) {
-      datoPeriodeTekst += "  |  " + dage[0].ugedag + " d. " + dage[0].dato + " — " + dage[dage.length - 1].ugedag + " d. " + dage[dage.length - 1].dato;
-    }
 
+    // Rent header-layout uden dato fra/til og uden "live opdateret"
     let out = `<div class="header-box">
       <h1 class="title">HÅNDKIRURGISK SEKTION — SLAGELSE SYGEHUS</h1>
       <div class="subtitle">
         <span class="month-badge">📅 ${maanedStr}</span>
-        <span>${datoPeriodeTekst} &nbsp;(Live opdateret)</span>
       </div>
     </div>
     <div class="table-wrapper"><table><thead><tr><th class="col-funktion">FUNKTION</th>`;
@@ -589,13 +619,30 @@
         if (personer.length > 0) {
           const personerHtml = personer.map(p => {
             const harNote = p.note && p.note.trim() !== "";
+            
+            // Tjek om denne læge skal fremhæves
+            let erFremhaevet = false;
+            if (fremhaevetLaege) {
+              if (p.laege && p.laege.toLowerCase() === fremhaevetLaege.toLowerCase()) {
+                erFremhaevet = true;
+              } else {
+                const regex = new RegExp('\\b' + fremhaevetLaege + '\\b', 'i');
+                if (regex.test(p.tekst)) {
+                  erFremhaevet = true;
+                }
+              }
+            }
+
+            const hlClass = erFremhaevet ? " highlight-doc" : "";
+
             if (harNote) {
               const safeNote = p.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
               const safeTitle = (p.tekst + " (" + kat.titel + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-              return `<span class="cell-item has-tooltip" data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
+              return `<span class="cell-item has-tooltip${hlClass}" data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
             }
-            return `<span class="cell-item">${p.tekst}</span>`;
+            return `<span class="cell-item${hlClass}">${p.tekst}</span>`;
           }).join("<br>");
+
           const bg = isWeekend ? fastHwFarve : kat.hverdagBg;
           out += `<td${tdCls} style="background-color:${bg}; color:${tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
         } else {
@@ -735,7 +782,6 @@
       aktiveFunktionsFiltre.indexOf(item.katId) !== -1
     );
 
-    // Udspecificeret optælling (HDV, OP, Amb, MV)
     const antalHdv = filtreret.filter(x => x.katId === "hdv").length;
     const antalOp = filtreret.filter(x => opKatIds.indexOf(x.katId) !== -1).length;
     const antalAmb = filtreret.filter(x => ["amb", "hambl", "heamb"].indexOf(x.katId) !== -1).length;
@@ -899,7 +945,6 @@
     return out;
   }
 
-  // Første kørsel ved sideindlæsning
   hentSkemaData(false);
 </script>
 </body>
