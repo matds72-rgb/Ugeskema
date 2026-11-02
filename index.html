@@ -154,12 +154,12 @@
     }
 
     /* =========================================================
-       PRINT STYLING (CTRL + P): KUN SKEMAET — TILPASSET 1 SIDE A4
+       PRINT STYLING (CTRL + P): CENTRERET MED FLOTTE HVIDE MARGENER
        ========================================================= */
     @media print {
       @page {
         size: A4 landscape;
-        margin: 5mm 6mm;
+        margin: 12mm 15mm; /* Skaber luft og pæne hvide margener hele vejen rundt */
       }
 
       * {
@@ -167,23 +167,24 @@
         print-color-adjust: exact !important;
       }
 
-      body {
+      html, body {
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
         color: #000000 !important;
+        height: auto !important;
       }
 
       .container {
         max-width: 100% !important;
         width: 100% !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         padding: 0 !important;
         border: none !important;
         box-shadow: none !important;
       }
 
-      /* Skjul alt overflødigt: knapper, faneblade, filtre og andre sider */
+      /* Skjul navigationslinjer, knapper og andre faner */
       .main-tab-bar,
       .nav-bar,
       .refresh-btn,
@@ -195,68 +196,84 @@
         display: none !important;
       }
 
-      /* Tving kun ugeskemaet frem */
+      /* Ugeskemaet gøres aktivt og centreres */
       #sideUgeskema {
         display: block !important;
+        width: 100% !important;
+        margin: 0 auto !important;
       }
 
       .header-box {
-        margin-bottom: 6px !important;
-        padding-bottom: 4px !important;
+        text-align: center !important;
+        margin: 0 auto 10px auto !important;
+        padding-bottom: 6px !important;
         border-bottom: 1px solid #cbd5e1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
       }
 
       .title {
-        font-size: 0.95rem !important;
-        margin: 0 !important;
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        margin: 0 0 4px 0 !important;
+        text-align: center !important;
       }
 
       .subtitle {
-        font-size: 0.75rem !important;
-        margin-top: 2px !important;
+        font-size: 0.80rem !important;
+        margin-top: 0 !important;
+        justify-content: center !important;
       }
 
       .month-badge {
-        font-size: 0.70rem !important;
-        padding: 1px 6px !important;
+        font-size: 0.74rem !important;
+        padding: 2px 8px !important;
       }
 
       .table-wrapper {
         border: 1px solid #64748b !important;
         overflow: visible !important;
-        border-radius: 0 !important;
+        border-radius: 6px !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
 
       table {
         width: 100% !important;
         min-width: 0 !important;
         table-layout: fixed !important;
+        margin: 0 auto !important;
       }
 
       th, td {
-        border: 1px solid #64748b !important;
-        padding: 3px 2px !important;
-        font-size: 0.68rem !important;
-        line-height: 1.15 !important;
+        border: 1px solid #94a3b8 !important;
+        padding: 4px 3px !important;
+        font-size: 0.72rem !important;
+        line-height: 1.22 !important;
         word-break: break-word !important;
+        text-align: center !important;
       }
 
       th {
-        padding: 4px 2px !important;
-        font-size: 0.72rem !important;
+        padding: 5px 3px !important;
+        font-size: 0.75rem !important;
+        background-color: #f1f5f9 !important;
       }
 
       td.col-funktion {
-        width: 135px !important;
-        font-size: 0.70rem !important;
-        padding-left: 4px !important;
+        width: 145px !important;
+        font-size: 0.73rem !important;
+        padding-left: 6px !important;
+        text-align: left !important;
       }
 
       .note-icon {
-        display: none !important; /* Skjul ⓘ ikonet på print */
+        display: none !important;
       }
 
-      /* Forhindrer tabellen i at dele sig */
       tr {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
