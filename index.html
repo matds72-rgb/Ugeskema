@@ -41,6 +41,17 @@
     th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }
     td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }
 
+    /* FREMHÆV LÆGE PÅ SIDE 1 */
+    .highlight-doc {
+      background: #fef08a !important;
+      color: #854d0e !important;
+      border: 2px solid #eab308 !important;
+      box-shadow: 0 0 8px rgba(234, 179, 8, 0.55);
+      font-weight: 800 !important;
+      border-radius: 6px;
+      padding: 1px 6px;
+    }
+
     /* DAGS DATO MARKERING (RING & KOLONNE) */
     th.today-col-head { background: #d1fae5 !important; border-top: 3px solid #059669 !important; border-bottom: 3px solid #059669 !important; }
     .today-badge { display: inline-block; border: 2px solid #059669; background: #059669; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(5,150,105,0.3); }
@@ -161,6 +172,9 @@
         <select id="weekDropdown" class="week-select" onchange="visUge(parseInt(this.value, 10))"></select>
         <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>
         <button class="nav-btn-today" onclick="hopTilAktuelUge()">📍 I dag</button>
+        <select id="highlightSelect" class="week-select" onchange="skiftHighlightLaege(this.value)" style="min-width: 170px;">
+          <option value="">👤 Fremhæv: Ingen</option>
+        </select>
       </div>
       <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
     </div>
@@ -326,6 +340,7 @@
   let valgteIndividuelleLaeger = [];
   let aktiveFunktionsFiltre = [];
   let aktivSide = "sideUgeskema";
+  let fremhaevetLaege = localStorage.getItem("hk_fremhaevetLaege_side1") || "";
 
   const nuDato = new Date();
   const iDagNummer = nuDato.getDate();
@@ -333,6 +348,40 @@
 
   const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
   const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
+
+  /* FREMHÆV LÆGE PÅ SIDE 1 FUNKTIONER */
+  function opbygHighlightDropdown() {
+    const sel = document.getElementById("highlightSelect");
+    if (!sel) return;
+    sel.innerHTML = `<option value="">👤 Fremhæv: Ingen</option>` + laeger.map(l => {
+      const navn = l.navn || l;
+      const erValgt = (navn === fremhaevetLaege) ? " selected" : "";
+      return `<option value="${navn}"${erValgt}>👤 Fremhæv: ${navn}</option>`;
+    }).join("");
+  }
+
+  function skiftHighlightLaege(navn) {
+    fremhaevetLaege = navn || "";
+    try { localStorage.setItem("hk_fremhaevetLaege_side1", fremhaevetLaege); } catch (e) {}
+    anvendHighlightPaaSide1();
+  }
+
+  function anvendHighlightPaaSide1() {
+    const ugeContainer = document.getElementById("dynamiskUgeContainer");
+    if (!ugeContainer) return;
+
+    const soegt = (fremhaevetLaege || "").trim();
+    const regex = soegt ? new RegExp("(^|[^a-zA-ZæøåÆØÅ])" + soegt + "([^a-zA-ZæøåÆØÅ]|$)", "i") : null;
+
+    ugeContainer.querySelectorAll(".cell-item").forEach(el => {
+      const tekst = (el.textContent || "").trim();
+      if (regex && regex.test(tekst)) {
+        el.classList.add("highlight-doc");
+      } else {
+        el.classList.remove("highlight-doc");
+      }
+    });
+  }
 
   function anvendSkemaData(data, erOpdatering) {
     ugerData = data.ugerData || {};
@@ -396,7 +445,7 @@
     const btnRef = document.getElementById("btnRefresh");
     if (btnRef) btnRef.innerText = "⏳ Henter...";
 
-    const CACHE_KEY = "hk_skemaData_cache";
+    const CACHE_KEY = "hk_skemaData_cache_v2";
     let harVistFraCache = false;
 
     if (!erGenindlaesning) {
@@ -441,6 +490,8 @@
     weekDrop.innerHTML = alleUger.map(u => 
       `<option value="${u}">Uge ${u}${u === aktueltUgeNr ? " (I dag)" : ""}</option>`
     ).join("");
+
+    opbygHighlightDropdown();
 
     const mSelectOp = document.getElementById("maanedSelect");
     const mSelectInd = document.getElementById("maanedSelectIndividuel");
@@ -618,6 +669,8 @@
     out += `</tbody></table></div>`;
     document.getElementById("dynamiskUgeContainer").innerHTML = out;
     document.getElementById("weekDropdown").value = ugeNr;
+
+    anvendHighlightPaaSide1();
 
     const idx = alleUger.indexOf(ugeNr);
     document.getElementById("btnPrev").classList.toggle("disabled", idx <= 0);
@@ -823,7 +876,6 @@
   }
 
   function aabnIcalModal() {
-    // Hvis flere er valgt, bruges den første som udgangspunkt for det personlige iCal feed
     const primærLaege = valgteIndividuelleLaeger.length > 0 ? valgteIndividuelleLaeger[0] : (laeger[0] ? laeger[0].navn : "");
     const url = SCRIPT_URL + "?ical=1&laege=" + encodeURIComponent(primærLaege);
     document.getElementById("modalLaegeNavn").innerText = primærLaege;
@@ -898,7 +950,6 @@
 
       events.forEach(e => {
         const labelTekst = erOverlapSide ? e.opType : e.label;
-        // På Side 3 vises lægens navn diskret, hvis der er valgt mere end 1 læge
         let personTekst = "";
         if (erOverlapSide) {
           personTekst = e.laege;
