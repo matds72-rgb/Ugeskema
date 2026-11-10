@@ -41,7 +41,7 @@
     th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }
     td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }
 
-    /* DAGS DATO MARKERING */
+    /* DAGS DATO MARKERING (RING & KOLONNE) */
     th.today-col-head { background: #d1fae5 !important; border-top: 3px solid #059669 !important; border-bottom: 3px solid #059669 !important; }
     .today-badge { display: inline-block; border: 2px solid #059669; background: #059669; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(5,150,105,0.3); }
     td.today-col { border-left: 2px solid #059669 !important; border-right: 2px solid #059669 !important; }
@@ -85,23 +85,10 @@
     .has-tooltip:hover::before { content: ""; position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0f172a; z-index: 101; pointer-events: none; }
     .note-icon { font-size: 0.55rem; opacity: 0.6; margin-left: 2px; vertical-align: super; font-weight: 500; }
 
-    /* FREMHÆV VALGT LÆGE PÅ SIDE 1 (LYSENDE RING & FARVE) */
-    .cell-item.highlight-doc {
-      background: #fef08a !important;
-      color: #0f172a !important;
-      border: 2px solid #ca8a04 !important;
-      border-radius: 6px;
-      padding: 1px 7px;
-      font-weight: 800 !important;
-      box-shadow: 0 0 8px rgba(234, 179, 8, 0.7), 0 1px 3px rgba(0,0,0,0.15);
-      display: inline-block;
-      margin: 1px 0;
-    }
-
     .cal-events { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
-    .cal-event { padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; line-height: 1.25; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.03); position: relative; }
+    .cal-event { padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; line-height: 1.25; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.03); position: relative; gap: 6px; }
 
-    /* Note Toast */
+    /* Note Toast på mobil & desktop */
     #noteToast { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #ffffff; padding: 12px 16px; border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 10000; max-width: 90vw; width: 340px; font-size: 0.84rem; line-height: 1.4; border: 1px solid #334155; }
     .toast-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; font-size: 0.80rem; }
     .toast-close { background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
@@ -152,133 +139,6 @@
       .cal-date-num { font-size: 0.78rem !important; }
       .cal-event { font-size: 0.68rem !important; padding: 2px 4px !important; margin-bottom: 2px !important; }
     }
-
-    /* =========================================================
-       PRINT STYLING (CTRL + P): CENTRERET MED FLOTTE HVIDE MARGENER
-       ========================================================= */
-    @media print {
-      @page {
-        size: A4 landscape;
-        margin: 12mm 15mm; /* Skaber luft og pæne hvide margener hele vejen rundt */
-      }
-
-      * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-
-      html, body {
-        background: #ffffff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        color: #000000 !important;
-        height: auto !important;
-      }
-
-      .container {
-        max-width: 100% !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-      }
-
-      /* Skjul navigationslinjer, knapper og andre faner */
-      .main-tab-bar,
-      .nav-bar,
-      .refresh-btn,
-      #loadingBox,
-      #noteToast,
-      .modal-overlay,
-      #sideOpMaaned,
-      #sideIndividuel {
-        display: none !important;
-      }
-
-      /* Ugeskemaet gøres aktivt og centreres */
-      #sideUgeskema {
-        display: block !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-      }
-
-      .header-box {
-        text-align: center !important;
-        margin: 0 auto 10px auto !important;
-        padding-bottom: 6px !important;
-        border-bottom: 1px solid #cbd5e1 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
-
-      .title {
-        font-size: 1.05rem !important;
-        font-weight: 700 !important;
-        margin: 0 0 4px 0 !important;
-        text-align: center !important;
-      }
-
-      .subtitle {
-        font-size: 0.80rem !important;
-        margin-top: 0 !important;
-        justify-content: center !important;
-      }
-
-      .month-badge {
-        font-size: 0.74rem !important;
-        padding: 2px 8px !important;
-      }
-
-      .table-wrapper {
-        border: 1px solid #64748b !important;
-        overflow: visible !important;
-        border-radius: 6px !important;
-        margin: 0 auto !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-      }
-
-      table {
-        width: 100% !important;
-        min-width: 0 !important;
-        table-layout: fixed !important;
-        margin: 0 auto !important;
-      }
-
-      th, td {
-        border: 1px solid #94a3b8 !important;
-        padding: 4px 3px !important;
-        font-size: 0.72rem !important;
-        line-height: 1.22 !important;
-        word-break: break-word !important;
-        text-align: center !important;
-      }
-
-      th {
-        padding: 5px 3px !important;
-        font-size: 0.75rem !important;
-        background-color: #f1f5f9 !important;
-      }
-
-      td.col-funktion {
-        width: 145px !important;
-        font-size: 0.73rem !important;
-        padding-left: 6px !important;
-        text-align: left !important;
-      }
-
-      .note-icon {
-        display: none !important;
-      }
-
-      tr {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-      }
-    }
   </style>
 </head>
 <body>
@@ -302,10 +162,7 @@
         <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>
         <button class="nav-btn-today" onclick="hopTilAktuelUge()">📍 I dag</button>
       </div>
-      <div class="nav-group">
-        <select id="highlightDoctorSelect" class="week-select" onchange="skiftFremhaevetLaege(this.value)"></select>
-        <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
-      </div>
+      <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
     </div>
     <div id="dynamiskUgeContainer"></div>
   </div>
@@ -336,7 +193,7 @@
     <div id="kalenderContainer"></div>
   </div>
 
-  <!-- Side 3: Månedskalender Individuel -->
+  <!-- Side 3: Månedskalender Individuel (Multiselect) -->
   <div id="sideIndividuel" class="page-view">
     <div class="header-box">
       <h1 class="title">MÅNEDSKALENDER INDIVIDUEL</h1>
@@ -354,8 +211,16 @@
         <div id="indStatusBadge" style="font-size:0.80rem; font-weight:700; background:#d1fae5; color:#065f46; padding:5px 12px; border-radius:20px; border:1px solid #a7f3d0;">0 funktioner</div>
       </div>
     </div>
-    <div style="font-size:0.82rem; font-weight:600; color:#64748b; margin-bottom:5px;">Vælg person (huskes på din enhed):</div>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+      <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg personer (klik for at tilføje/fjerne):</div>
+      <div style="display:flex; gap:5px;">
+        <button class="chip-action-btn" onclick="vaelgAlleIndividuelleLaeger(true)">Vælg alle</button>
+        <button class="chip-action-btn" onclick="vaelgAlleIndividuelleLaeger(false)">Nulstil</button>
+      </div>
+    </div>
     <div id="indDoctorChips" class="doctor-chips"></div>
+
     <div class="filter-box">
       <div class="filter-title">
         <span>Filtrér funktioner:</span>
@@ -372,7 +237,7 @@
   </div>
 </div>
 
-<!-- Svævende Note-boks -->
+<!-- Svævende Note-boks til mobil og desktop -->
 <div id="noteToast" onclick="lukNoteToast()">
   <div class="toast-header">
     <span id="noteToastTitle">Bemærkning</span>
@@ -458,8 +323,7 @@
   let valgtUge = null;
   let aktueltUgeNrServer = null;
   let valgteLaeger = [];
-  let individuelValgtLaege = "";
-  let fremhaevetLaege = "";
+  let valgteIndividuelleLaeger = [];
   let aktiveFunktionsFiltre = [];
   let aktivSide = "sideUgeskema";
 
@@ -490,16 +354,17 @@
 
     if (!erOpdatering) {
       try {
-        const gemtInd = localStorage.getItem("hk_individuelLaege");
-        if (gemtInd && alleNavne.indexOf(gemtInd) !== -1) {
-          individuelValgtLaege = gemtInd;
-        } else if (laeger.length > 0) {
-          individuelValgtLaege = laeger[0].navn;
+        const gemtInd = JSON.parse(localStorage.getItem("hk_valgteIndividuelleLaeger") || "null");
+        if (Array.isArray(gemtInd)) {
+          valgteIndividuelleLaeger = gemtInd.filter(n => alleNavne.indexOf(n) !== -1);
+        } else {
+          const gammelEnkelt = localStorage.getItem("hk_individuelLaege");
+          if (gammelEnkelt && alleNavne.indexOf(gammelEnkelt) !== -1) {
+            valgteIndividuelleLaeger = [gammelEnkelt];
+          }
         }
-
-        const gemtHl = localStorage.getItem("hk_fremhaevetLaege");
-        if (gemtHl !== null && (gemtHl === "" || alleNavne.indexOf(gemtHl) !== -1)) {
-          fremhaevetLaege = gemtHl;
+        if (valgteIndividuelleLaeger.length === 0 && laeger.length > 0) {
+          valgteIndividuelleLaeger = [laeger[0].navn];
         }
 
         const gemtOp = JSON.parse(localStorage.getItem("hk_valgteLaeger") || "null");
@@ -507,12 +372,12 @@
           valgteLaeger = gemtOp.filter(n => alleNavne.indexOf(n) !== -1);
         }
         if (valgteLaeger.length === 0 && laeger.length > 0) {
-          valgteLaeger = [individuelValgtLaege || laeger[0].navn];
+          valgteLaeger = [laeger[0].navn];
         }
       } catch (e) {
         if (laeger.length > 0) {
           valgteLaeger = [laeger[0].navn];
-          individuelValgtLaege = laeger[0].navn;
+          valgteIndividuelleLaeger = [laeger[0].navn];
         }
       }
 
@@ -577,16 +442,6 @@
       `<option value="${u}">Uge ${u}${u === aktueltUgeNr ? " (I dag)" : ""}</option>`
     ).join("");
 
-    const hlSelect = document.getElementById("highlightDoctorSelect");
-    if (hlSelect) {
-      let hlHtml = '<option value="">👤 Fremhæv læge: Ingen</option>';
-      laeger.forEach(l => {
-        const sel = (l.navn.toLowerCase() === fremhaevetLaege.toLowerCase()) ? " selected" : "";
-        hlHtml += `<option value="${l.navn}"${sel}>👤 Fremhæv: ${l.navn}</option>`;
-      });
-      hlSelect.innerHTML = hlHtml;
-    }
-
     const mSelectOp = document.getElementById("maanedSelect");
     const mSelectInd = document.getElementById("maanedSelectIndividuel");
     const tidligereOpM = beholdValg && mSelectOp.value ? parseInt(mSelectOp.value, 10) : null;
@@ -608,14 +463,16 @@
     mSelectOp.innerHTML = mOptionsOp;
     mSelectInd.innerHTML = mOptionsInd;
 
+    // Side 2 Lægechips
     document.getElementById("opDoctorChips").innerHTML = laeger.map(l => {
       const erValgt = valgteLaeger.indexOf(l.navn) !== -1;
       return `<button class="chip-btn${erValgt ? " active" : ""}" data-navn="${l.navn}" onclick="toggleLaege('${l.navn}', this)">${l.navn}</button>`;
     }).join("");
 
+    // Side 3 Lægechips (Multiselect)
     document.getElementById("indDoctorChips").innerHTML = laeger.map(l => {
-      const erValgt = l.navn === individuelValgtLaege;
-      return `<button class="chip-btn ind-laege-chip${erValgt ? " active" : ""}" data-navn="${l.navn}" onclick="vaelgIndividuelLaege('${l.navn}', this)">${l.navn}</button>`;
+      const erValgt = valgteIndividuelleLaeger.indexOf(l.navn) !== -1;
+      return `<button class="chip-btn ind-laege-chip${erValgt ? " active" : ""}" data-navn="${l.navn}" onclick="toggleIndividuelLaege('${l.navn}', this)">${l.navn}</button>`;
     }).join("");
 
     if (!beholdValg) {
@@ -626,14 +483,6 @@
       filterHtml += `<span id="ftag_syg" class="filter-tag c-syg" data-katid="syg" onclick="toggleFunktionsFilter('syg', this)">Sygdom</span>`;
       document.getElementById("filterChipsContainer").innerHTML = filterHtml;
     }
-  }
-
-  function skiftFremhaevetLaege(navn) {
-    fremhaevetLaege = navn;
-    try {
-      localStorage.setItem("hk_fremhaevetLaege", navn);
-    } catch (e) {}
-    visUge(valgtUge);
   }
 
   function skiftSide(sideId) {
@@ -717,11 +566,16 @@
     const dage = uData.dage;
     const matrix = uData.matrix;
     const maanedStr = uData.maaneder.join(" / ");
+    let datoPeriodeTekst = "Uge " + ugeNr;
+    if (dage.length > 0) {
+      datoPeriodeTekst += "  |  " + dage[0].ugedag + " d. " + dage[0].dato + " — " + dage[dage.length - 1].ugedag + " d. " + dage[dage.length - 1].dato;
+    }
 
     let out = `<div class="header-box">
       <h1 class="title">HÅNDKIRURGISK SEKTION — SLAGELSE SYGEHUS</h1>
       <div class="subtitle">
         <span class="month-badge">📅 ${maanedStr}</span>
+        <span>${datoPeriodeTekst} &nbsp;(Live opdateret)</span>
       </div>
     </div>
     <div class="table-wrapper"><table><thead><tr><th class="col-funktion">FUNKTION</th>`;
@@ -744,29 +598,13 @@
         if (personer.length > 0) {
           const personerHtml = personer.map(p => {
             const harNote = p.note && p.note.trim() !== "";
-            
-            let erFremhaevet = false;
-            if (fremhaevetLaege) {
-              if (p.laege && p.laege.toLowerCase() === fremhaevetLaege.toLowerCase()) {
-                erFremhaevet = true;
-              } else {
-                const regex = new RegExp('\\b' + fremhaevetLaege + '\\b', 'i');
-                if (regex.test(p.tekst)) {
-                  erFremhaevet = true;
-                }
-              }
-            }
-
-            const hlClass = erFremhaevet ? " highlight-doc" : "";
-
             if (harNote) {
               const safeNote = p.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
               const safeTitle = (p.tekst + " (" + kat.titel + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-              return `<span class="cell-item has-tooltip${hlClass}" data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
+              return `<span class="cell-item has-tooltip" data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
             }
-            return `<span class="cell-item${hlClass}">${p.tekst}</span>`;
+            return `<span class="cell-item">${p.tekst}</span>`;
           }).join("<br>");
-
           const bg = isWeekend ? fastHwFarve : kat.hverdagBg;
           out += `<td${tdCls} style="background-color:${bg}; color:${tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
         } else {
@@ -794,6 +632,7 @@
     }
   }
 
+  /* SIDE 2: OP & OVERLAP LOGIK */
   function toggleLaege(navn, btn) {
     const pos = valgteLaeger.indexOf(navn);
     if (pos !== -1) {
@@ -840,11 +679,31 @@
     container.innerHTML = bygKalenderHtml(mId, posterPrDato, true);
   }
 
-  function vaelgIndividuelLaege(navn, btn) {
-    individuelValgtLaege = navn;
-    try { localStorage.setItem("hk_individuelLaege", navn); } catch (e) {}
-    document.querySelectorAll(".ind-laege-chip").forEach(c => c.classList.remove("active"));
-    btn.classList.add("active");
+  /* SIDE 3: MULTISELECT LOGIK */
+  function toggleIndividuelLaege(navn, btn) {
+    const pos = valgteIndividuelleLaeger.indexOf(navn);
+    if (pos !== -1) {
+      valgteIndividuelleLaeger.splice(pos, 1);
+      btn.classList.remove("active");
+    } else {
+      valgteIndividuelleLaeger.push(navn);
+      btn.classList.add("active");
+    }
+    try { localStorage.setItem("hk_valgteIndividuelleLaeger", JSON.stringify(valgteIndividuelleLaeger)); } catch (e) {}
+    opdaterIndividuelVisning();
+  }
+
+  function vaelgAlleIndividuelleLaeger(val) {
+    valgteIndividuelleLaeger = [];
+    document.querySelectorAll("#sideIndividuel .ind-laege-chip").forEach(btn => {
+      if (val) {
+        valgteIndividuelleLaeger.push(btn.getAttribute("data-navn"));
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+    try { localStorage.setItem("hk_valgteIndividuelleLaeger", JSON.stringify(valgteIndividuelleLaeger)); } catch (e) {}
     opdaterIndividuelVisning();
   }
 
@@ -896,13 +755,16 @@
     opdaterMaanedKnapper("maanedSelectIndividuel", "btnPrevMaanedInd", "btnNextMaanedInd");
     const mId = parseInt(document.getElementById("maanedSelectIndividuel").value, 10);
     const container = document.getElementById("individuelKalenderContainer");
-    if (!individuelValgtLaege) {
-      container.innerHTML = `<div class="op-empty">Vælg en person ovenfor.</div>`;
+    
+    if (valgteIndividuelleLaeger.length === 0) {
+      container.innerHTML = `<div class="op-empty">Vælg mindst én person ovenfor for at se månedskalenderen.</div>`;
+      document.getElementById("indStatusBadge").innerText = "0 funktioner";
       return;
     }
+
     const filtreret = alleIndividuelleVagter.filter(item => 
       item.maanedId === mId && 
-      item.laege.toLowerCase() === individuelValgtLaege.toLowerCase() && 
+      valgteIndividuelleLaeger.indexOf(item.laege) !== -1 && 
       aktiveFunktionsFiltre.indexOf(item.katId) !== -1
     );
 
@@ -961,8 +823,10 @@
   }
 
   function aabnIcalModal() {
-    const url = SCRIPT_URL + "?ical=1&laege=" + encodeURIComponent(individuelValgtLaege);
-    document.getElementById("modalLaegeNavn").innerText = individuelValgtLaege;
+    // Hvis flere er valgt, bruges den første som udgangspunkt for det personlige iCal feed
+    const primærLaege = valgteIndividuelleLaeger.length > 0 ? valgteIndividuelleLaeger[0] : (laeger[0] ? laeger[0].navn : "");
+    const url = SCRIPT_URL + "?ical=1&laege=" + encodeURIComponent(primærLaege);
+    document.getElementById("modalLaegeNavn").innerText = primærLaege;
     document.getElementById("icalUrlInput").value = url;
     document.getElementById("icalModal").style.display = "flex";
   }
@@ -1034,7 +898,14 @@
 
       events.forEach(e => {
         const labelTekst = erOverlapSide ? e.opType : e.label;
-        const personTekst = erOverlapSide ? e.laege : "";
+        // På Side 3 vises lægens navn diskret, hvis der er valgt mere end 1 læge
+        let personTekst = "";
+        if (erOverlapSide) {
+          personTekst = e.laege;
+        } else if (valgteIndividuelleLaeger.length > 1) {
+          personTekst = e.laege;
+        }
+
         let katKlasse = "c-" + (e.katId ? e.katId : "op10");
         if (erOverlapSide) {
           const t = e.opType.toLowerCase();
@@ -1047,13 +918,13 @@
 
         const harNote = e.note && e.note.trim() !== "";
         const safeNote = harNote ? e.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;") : "";
-        const safeTitle = (labelTekst + (personTekst ? " - " + personTekst : "") + " (" + dag + "/" + mId + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        const safeTitle = (labelTekst + (e.laege ? " - " + e.laege : "") + " (" + dag + "/" + mId + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
         const tooltipAttr = harNote ? ` data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')"` : "";
         const tooltipKlasse = harNote ? " has-tooltip" : "";
 
         out += `<div class="cal-event ${katKlasse}${tooltipKlasse}"${tooltipAttr}>
           <span>${labelTekst}${harNote ? ` <span class="note-icon">ⓘ</span>` : ""}</span>
-          ${personTekst ? `<span>${personTekst}</span>` : ""}
+          ${personTekst ? `<span style="font-weight:600; opacity:0.85; font-size:0.70rem;">(${personTekst})</span>` : ""}
         </div>`;
       });
 
@@ -1069,6 +940,7 @@
     return out;
   }
 
+  // Start indlæsning
   hentSkemaData(false);
 </script>
 </body>
