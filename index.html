@@ -1,947 +1,1418 @@
-<!DOCTYPE html>
-<html lang="da">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Håndkirurgisk Sektion — Skema & Kalender</title>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Håndkirurgi">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#059669">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 12px; color: #0f172a; -webkit-tap-highlight-color: transparent; }
-    .container { max-width: 1280px; margin: 0 auto; background: #ffffff; padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-    
-    .main-tab-bar { display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; flex-wrap: wrap; align-items: center; }
-    .tab-btn { flex: 1; min-width: 130px; padding: 9px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; text-align: center; transition: all 0.15s ease; }
-    .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-    .tab-btn.active { background: #d1fae5; color: #065f46; border-color: #059669; font-weight: 700; box-shadow: 0 1px 3px rgba(5,150,105,0.15); }
-    .refresh-btn { padding: 9px 12px; font-size: 0.84rem; font-weight: 600; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
-    .refresh-btn:hover { background: #e2e8f0; color: #0f172a; }
+// =================================================================
+// HÅNDKIRURGISK SEKTION: UGESKEMA, OVERLAP & INDIVIDUEL MÅNED (PWA)
+// =================================================================
 
-    .nav-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #f8fafc; padding: 9px 12px; border-radius: 8px; border: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px; }
-    .nav-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .nav-btn { display: inline-flex; align-items: center; justify-content: center; background: #059669; color: #ffffff; padding: 7px 12px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: background 0.15s ease; white-space: nowrap; }
-    .nav-btn:hover:not(.disabled) { background: #047857; }
-    .nav-btn.disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
-    .nav-btn-today { background: #ffffff; color: #065f46; border: 1px solid #059669; padding: 6px 10px; font-size: 0.80rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
-    .nav-btn-today:hover { background: #d1fae5; }
-    .week-select { font-size: 0.88rem; font-weight: 600; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; cursor: pointer; }
-    
-    .header-box { margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-    .title { font-size: 1.12rem; font-weight: 700; color: #0f172a; margin: 0; }
-    .subtitle { font-size: 0.82rem; color: #64748b; margin-top: 4px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .month-badge { display: inline-flex; align-items: center; background: #d1fae5; color: #065f46; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #a7f3d0; }
+/**
+ * WEB APP ROUTER:
+ * - Returnerer HTML-webappen ved alm. besøg
+ * - Returnerer et live iCalendar (.ics) feed hvis kaldt med ?ical=1&laege=INIT
+ */
+function doGet(e) {
+  var params = (e && e.parameter) ? e.parameter : {};
 
-    .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; border: 1px solid #cbd5e1; }
-    table { border-collapse: collapse; width: 100%; min-width: 760px; text-align: center; }
-    th, td { border: 1px solid #94a3b8; padding: 8px 5px; font-size: 0.82rem; vertical-align: middle; line-height: 1.35; color: #0f172a; }
-    th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }
-    td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }
-
-    /* DAGS DATO MARKERING (RING & KOLONNE) */
-    th.today-col-head { background: #d1fae5 !important; border-top: 3px solid #059669 !important; border-bottom: 3px solid #059669 !important; }
-    .today-badge { display: inline-block; border: 2px solid #059669; background: #059669; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(5,150,105,0.3); }
-    td.today-col { border-left: 2px solid #059669 !important; border-right: 2px solid #059669 !important; }
-    .cal-cell.today-cell { border: 2px solid #059669 !important; background: #ecfdf5 !important; }
-    .today-ring { border: 2px solid #059669; background: #059669; color: #ffffff !important; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
-    
-    .page-view { display: none; }
-    .page-view.active { display: block; }
-    
-    .doctor-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; }
-    .chip-btn { padding: 6px 11px; font-size: 0.82rem; font-weight: 600; border-radius: 20px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: all 0.15s ease; user-select: none; }
-    .chip-btn:hover { background: #f1f5f9; }
-    .chip-btn.active { background: #059669; color: #ffffff; border-color: #059669; box-shadow: 0 1px 3px rgba(5,150,105,0.25); }
-    .chip-action-btn { padding: 5px 9px; font-size: 0.76rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: background 0.15s ease; }
-    .chip-action-btn:hover { background: #f1f5f9; }
-    .btn-ical { background: #059669 !important; color: #ffffff !important; border: none !important; font-weight: 600 !important; }
-
-    .filter-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
-    .filter-title { font-size: 0.80rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-    .filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-    .filter-tag { padding: 4px 8px; border-radius: 5px; font-size: 0.74rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; opacity: 0.40; transition: all 0.15s ease; user-select: none; }
-    .filter-tag.active { opacity: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.06); border-color: transparent; }
-
-    .calendar-grid-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid #cbd5e1; }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); background: #e2e8f0; gap: 1px; min-width: 910px; }
-    .cal-head { background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.80rem; text-align: center; padding: 8px 4px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
-    .cal-cell { background: #ffffff; min-height: 100px; padding: 6px; display: flex; flex-direction: column; transition: background 0.1s; position: relative; }
-    .cal-cell.empty { background: #f8fafc; opacity: 0.5; }
-    .cal-cell.weekend { background: #fafafa; }
-    .cal-cell.overlap-day { background: #fffbeb !important; border: 2px solid #f59e0b; }
-    .cal-date-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-radius: 4px; padding: 2px 3px; transition: background 0.15s; }
-    .cal-date-bar.clickable { cursor: pointer; }
-    .cal-date-bar.clickable:hover { background: #f1f5f9; }
-    .cal-date-num { font-size: 0.86rem; font-weight: 700; color: #475569; display: inline-flex; align-items: center; gap: 4px; }
-    .week-mini-pill { font-size: 0.65rem; font-weight: 700; color: #065f46; background: #d1fae5; padding: 1px 5px; border-radius: 4px; }
-    .overlap-pill { font-size: 0.65rem; font-weight: 800; background: #f59e0b; color: #ffffff; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.3px; }
-
-    .cell-item { display: inline-flex; align-items: center; justify-content: center; position: relative; }
-    .has-tooltip { cursor: pointer; border-bottom: 1px dashed rgba(15, 23, 42, 0.4); }
-    .has-tooltip:hover::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #f8fafc; padding: 5px 8px; border-radius: 5px; font-size: 0.74rem; font-weight: 500; white-space: normal; width: max-content; max-width: 170px; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); pointer-events: none; line-height: 1.3; text-align: center; }
-    .has-tooltip:hover::before { content: ""; position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0f172a; z-index: 101; pointer-events: none; }
-    .note-icon { font-size: 0.55rem; opacity: 0.6; margin-left: 2px; vertical-align: super; font-weight: 500; }
-
-    .cal-events { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
-    .cal-event { padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; line-height: 1.25; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.03); position: relative; gap: 6px; }
-
-    /* Note Toast på mobil & desktop */
-    #noteToast { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #ffffff; padding: 12px 16px; border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 10000; max-width: 90vw; width: 340px; font-size: 0.84rem; line-height: 1.4; border: 1px solid #334155; }
-    .toast-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; font-size: 0.80rem; }
-    .toast-close { background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
-
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }
-    .modal-box { background: #ffffff; border-radius: 12px; max-width: 540px; width: 100%; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; max-height: 90vh; overflow-y: auto; text-align: left; }
-    .modal-title { font-size: 1.10rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
-    .link-input-box { display: flex; gap: 8px; margin: 10px 0 14px 0; }
-    .link-input { flex: 1; padding: 7px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155; font-family: monospace; }
-    .guide-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
-    .guide-step { font-size: 0.82rem; color: #334155; line-height: 1.4; margin: 3px 0; }
-
-    .c-hdv { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
-    .c-op10 { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
-    .c-op21 { background: #e0f2fe; color: #075985; border-color: #0284c7; }
-    .c-op23 { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }
-    .c-hopa { background: #ccfbf1; color: #115e59; border-color: #14b8a6; }
-    .c-hlaamb { background: #e7e5e4; color: #292524; border-color: #78716c; }
-    .c-fokus_mv { background: #f3e8ff; color: #6b21a8; border-color: #a855f7; }
-    .c-amb { background: #dcfce7; color: #166534; border-color: #22c55e; }
-    .c-hambl { background: #f1f5f9; color: #334155; border-color: #64748b; }
-    .c-heamb { background: #ffedd5; color: #9a3412; border-color: #f97316; }
-    .c-adm { background: #fef9c3; color: #854d0e; border-color: #eab308; }
-    .c-kursus { background: #e2e8f0; color: #334155; border-color: #94a3b8; }
-    .c-fri_ferie { background: #fce7f3; color: #9d174d; border-color: #ec4899; }
-    .c-syg { background: #fef9c3; color: #a16207; border-color: #eab308; }
-
-    .op-empty { padding: 30px 16px; text-align: center; color: #64748b; font-size: 0.90rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 10px; }
-    #loadingBox { padding: 40px 20px; text-align: center; font-weight: 600; color: #065f46; }
-
-    @media screen and (max-width: 640px) {
-      body { padding: 6px !important; }
-      .container { padding: 8px !important; border-radius: 8px !important; }
-      .main-tab-bar { gap: 4px !important; margin-bottom: 10px !important; }
-      .tab-btn { padding: 8px 6px !important; font-size: 0.78rem !important; min-width: 100px !important; }
-      .refresh-btn { padding: 8px 8px !important; font-size: 0.78rem !important; }
-      .nav-bar { padding: 8px !important; gap: 6px !important; flex-wrap: wrap !important; }
-      .nav-group { width: 100%; justify-content: space-between; }
-      .nav-btn { flex: 1 1 auto !important; padding: 7px 8px !important; font-size: 0.78rem !important; }
-      .week-select { flex: 1 1 100% !important; order: -1; margin-bottom: 4px; font-size: 0.85rem !important; }
-      .table-wrapper { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
-      table { border-collapse: separate !important; border-spacing: 0; }
-      th, td { padding: 6px 4px !important; font-size: 0.75rem !important; min-width: 72px; }
-      th.col-funktion, td.col-funktion { position: sticky !important; left: 0 !important; z-index: 2 !important; min-width: 90px !important; max-width: 100px !important; box-shadow: 2px 0 5px rgba(0,0,0,0.08); }
-      th.col-funktion { z-index: 3 !important; }
-      .calendar-grid { grid-template-columns: repeat(7, minmax(85px, 1fr)) !important; min-width: 600px !important; }
-      .cal-cell { min-height: 80px !important; padding: 4px !important; }
-      .cal-date-num { font-size: 0.78rem !important; }
-      .cal-event { font-size: 0.68rem !important; padding: 2px 4px !important; margin-bottom: 2px !important; }
-    }
-  </style>
-</head>
-<body>
-
-<div class="container">
-  <div class="main-tab-bar">
-    <button id="tabBtnUge" class="tab-btn active" onclick="skiftSide('sideUgeskema')">📅 Ugeskema</button>
-    <button id="tabBtnOp" class="tab-btn" onclick="skiftSide('sideOpMaaned')">🔬 Måned (OP & Overlap)</button>
-    <button id="tabBtnIndividuel" class="tab-btn" onclick="skiftSide('sideIndividuel')">👤 Månedskalender individuel</button>
-    <button id="btnRefresh" class="refresh-btn" onclick="genindlaesSkema()" title="Hent nyeste ændringer fra skemaet">🔄 Opdater</button>
-  </div>
-
-  <div id="loadingBox">Henter opdateret vagtskema...</div>
-
-  <!-- Side 1: Ugeskema -->
-  <div id="sideUgeskema" class="page-view">
-    <div class="nav-bar">
-      <div class="nav-group">
-        <button id="btnPrev" class="nav-btn" onclick="skiftUgeRelativt(-1)">&#171; Forrige</button>
-        <select id="weekDropdown" class="week-select" onchange="visUge(parseInt(this.value, 10))"></select>
-        <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>
-        <button class="nav-btn-today" onclick="hopTilAktuelUge()">📍 I dag</button>
-      </div>
-      <button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>
-    </div>
-    <div id="dynamiskUgeContainer"></div>
-  </div>
-
-  <!-- Side 2: Måned (OP & Overlap) -->
-  <div id="sideOpMaaned" class="page-view">
-    <div class="header-box">
-      <h1 class="title">MÅNEDSKALENDER — OPERATIONSSTUER & OVERLAP</h1>
-      <div class="subtitle">Operationsstuer (OP10, OP21, OP22, OP23, HOPA og LA leje). Gule felter angiver overlap. Klik på en dato for at åbne ugeskemaet.</div>
-    </div>
-    <div class="nav-bar">
-      <div class="nav-group">
-        <button id="btnPrevMaanedOp" class="nav-btn" onclick="skiftMaanedRelativt('maanedSelect', -1, true)">&#171; Forrige</button>
-        <select id="maanedSelect" class="week-select" onchange="opdaterOpVisning()"></select>
-        <button id="btnNextMaanedOp" class="nav-btn" onclick="skiftMaanedRelativt('maanedSelect', 1, true)">Næste &#187;</button>
-        <button class="nav-btn-today" onclick="hopTilAktuelMaaned('maanedSelect', true)">📍 I dag</button>
-      </div>
-      <div id="opStatusBadge" style="font-size:0.82rem; font-weight:700; background:#d1fae5; color:#065f46; padding:5px 12px; border-radius:20px; border:1px solid #a7f3d0;">0 OP-vagter</div>
-    </div>
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-      <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg personer (huskes automatisk):</div>
-      <div style="display:flex; gap:5px;">
-        <button class="chip-action-btn" onclick="vaelgAlleLaeger(true)">Vælg alle</button>
-        <button class="chip-action-btn" onclick="vaelgAlleLaeger(false)">Nulstil</button>
-      </div>
-    </div>
-    <div id="opDoctorChips" class="doctor-chips"></div>
-    <div id="kalenderContainer"></div>
-  </div>
-
-  <!-- Side 3: Månedskalender Individuel (Multiselect) -->
-  <div id="sideIndividuel" class="page-view">
-    <div class="header-box">
-      <h1 class="title">MÅNEDSKALENDER INDIVIDUEL</h1>
-      <div class="subtitle">Klik på en dato for at hoppe til ugeskemaet, eller tryk på en vagt med ⓘ for at læse noter.</div>
-    </div>
-    <div class="nav-bar">
-      <div class="nav-group">
-        <button id="btnPrevMaanedInd" class="nav-btn" onclick="skiftMaanedRelativt('maanedSelectIndividuel', -1, false)">&#171; Forrige</button>
-        <select id="maanedSelectIndividuel" class="week-select" onchange="opdaterIndividuelVisning()"></select>
-        <button id="btnNextMaanedInd" class="nav-btn" onclick="skiftMaanedRelativt('maanedSelectIndividuel', 1, false)">Næste &#187;</button>
-        <button class="nav-btn-today" onclick="hopTilAktuelMaaned('maanedSelectIndividuel', false)">📍 I dag</button>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <button class="chip-action-btn btn-ical" onclick="aabnIcalModal()">📲 Få kalender-link</button>
-        <div id="indStatusBadge" style="font-size:0.80rem; font-weight:700; background:#d1fae5; color:#065f46; padding:5px 12px; border-radius:20px; border:1px solid #a7f3d0;">0 funktioner</div>
-      </div>
-    </div>
-    
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-      <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg personer (klik for at tilføje/fjerne):</div>
-      <div style="display:flex; gap:5px;">
-        <button class="chip-action-btn" onclick="vaelgAlleIndividuelleLaeger(true)">Vælg alle</button>
-        <button class="chip-action-btn" onclick="vaelgAlleIndividuelleLaeger(false)">Nulstil</button>
-      </div>
-    </div>
-    <div id="indDoctorChips" class="doctor-chips"></div>
-
-    <div class="filter-box">
-      <div class="filter-title">
-        <span>Filtrér funktioner:</span>
-        <div style="display:flex; gap:5px; flex-wrap:wrap;">
-          <button class="chip-action-btn" onclick="vaelgKunOpFunktioner()">🔬 Kun OP</button>
-          <button class="chip-action-btn" onclick="vaelgKunAmbFunktioner()">🏥 Kun ambulatorier</button>
-          <button class="chip-action-btn" onclick="toggleAlleFiltre(true)">Vælg alle</button>
-          <button class="chip-action-btn" onclick="toggleAlleFiltre(false)">Nulstil</button>
-        </div>
-      </div>
-      <div id="filterChipsContainer" class="filter-chips"></div>
-    </div>
-    <div id="individuelKalenderContainer"></div>
-  </div>
-</div>
-
-<!-- Svævende Note-boks til mobil og desktop -->
-<div id="noteToast" onclick="lukNoteToast()">
-  <div class="toast-header">
-    <span id="noteToastTitle">Bemærkning</span>
-    <button class="toast-close" onclick="lukNoteToast()">&times;</button>
-  </div>
-  <div id="noteToastBody"></div>
-</div>
-
-<!-- Modal 1: PWA -->
-<div id="pwaModal" class="modal-overlay" onclick="lukPwaModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <h2 class="modal-title">Føj skemaet som "App" på telefonen</h2>
-      <button onclick="lukPwaModal()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
-    </div>
-    <p style="font-size:0.83rem; color:#64748b; margin:4px 0 10px 0;">Åbner skemaet direkte fra hjemmeskærmen i fuld skærm – uden browserbjælker.</p>
-    <label style="font-size:0.78rem; font-weight:700; color:#334155;">Webapp-link:</label>
-    <div class="link-input-box">
-      <input type="text" id="pwaUrlInput" class="link-input" readonly>
-      <button class="chip-action-btn btn-ical" onclick="kopierPwaLink()">Kopiér link</button>
-    </div>
-    <div class="guide-section">
-      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🍎 iPhone / iPad (Safari):</div>
-      <div class="guide-step">1. Åbn linket i <b>Safari</b>.</div>
-      <div class="guide-step">2. Tryk på <b>Delingsikonet</b> (firkanten med pil op) i bunden.</div>
-      <div class="guide-step">3. Rul lidt ned og vælg <b>"Føj til hjemmeskærm"</b>.</div>
-      <div class="guide-step">4. Tryk <b>Tilføj</b> i øverste højre hjørne.</div>
-    </div>
-    <div class="guide-section">
-      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🤖 Android (Google Chrome):</div>
-      <div class="guide-step">1. Åbn linket i <b>Chrome</b>.</div>
-      <div class="guide-step">2. Tryk på de <b>tre prikker (menu)</b> i øverste højre hjørne.</div>
-      <div class="guide-step">3. Vælg <b>"Føj til startskærm"</b> eller <b>"Installer app"</b>.</div>
-      <div class="guide-step">4. Tryk <b>Tilføj / Installer</b>.</div>
-    </div>
-    <button class="nav-btn" style="width:100%; margin-top:8px;" onclick="lukPwaModal()">Forstået</button>
-  </div>
-</div>
-
-<!-- Modal 2: iCal -->
-<div id="icalModal" class="modal-overlay" onclick="lukIcalModal()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <h2 class="modal-title">Abonnér på din vagtkalender</h2>
-      <button onclick="lukIcalModal()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
-    </div>
-    <p style="font-size:0.83rem; color:#64748b; margin:4px 0 10px 0;">Dit personlige kalenderfeed synkroniserer automatisk dine vagter direkte til din iPhone eller Google Kalender.</p>
-    <label style="font-size:0.78rem; font-weight:700; color:#334155;">Dit personlige kalenderlink (<span id="modalLaegeNavn"></span>):</label>
-    <div class="link-input-box">
-      <input type="text" id="icalUrlInput" class="link-input" readonly>
-      <button class="chip-action-btn btn-ical" onclick="kopierIcalLink()">Kopiér link</button>
-    </div>
-    <div class="guide-section">
-      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🍎 iPhone / iPad (Apple Kalender):</div>
-      <div class="guide-step">1. Åbn <b>Indstillinger</b> på din iPhone.</div>
-      <div class="guide-step">2. Rul ned og vælg <b>Kalender</b> &gt; <b>Konti</b> &gt; <b>Tilføj konto</b>.</div>
-      <div class="guide-step">3. Vælg <b>Anden</b> &gt; <b>Tilføj kalenderabonnement</b>.</div>
-      <div class="guide-step">4. Indsæt det kopierede link og tryk <b>Næste</b> &gt; <b>Gem</b>.</div>
-    </div>
-    <div class="guide-section">
-      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🌐 Google Kalender (Android & Web):</div>
-      <div class="guide-step">1. Åbn <b>calendar.google.com</b> i en browser på computeren.</div>
-      <div class="guide-step">2. I venstre side under "Andre kalendere" trykker du på <b>+</b> (plus).</div>
-      <div class="guide-step">3. Vælg <b>Fra webadresse</b>.</div>
-      <div class="guide-step">4. Indsæt linket og tryk <b>Tilføj kalender</b>.</div>
-    </div>
-    <button class="nav-btn" style="width:100%; margin-top:8px;" onclick="lukIcalModal()">Luk vejledning</button>
-  </div>
-</div>
-
-<script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxheYROZLPCScSAf4akAu1lfOjB2ExISxq7Bswh4_2Hmr1PTKMNmf127ty1QQUdY4h6lg/exec";
-
-  let ugerData = {};
-  let layoutKategorier = [];
-  let fastHwFarve = "#c4b5fd";
-  let tekstFarveMork = "#0f172a";
-  let alleUger = [];
-  let alleOpDage = [];
-  let alleIndividuelleVagter = [];
-  let fundneMaaneder = {};
-  let laeger = [];
-  let valgtUge = null;
-  let aktueltUgeNrServer = null;
-  let valgteLaeger = [];
-  let valgteIndividuelleLaeger = [];
-  let aktiveFunktionsFiltre = [];
-  let aktivSide = "sideUgeskema";
-
-  const nuDato = new Date();
-  const iDagNummer = nuDato.getDate();
-  const iDagMaanedId = nuDato.getMonth() + 1;
-
-  const opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];
-  const ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "mv"];
-
-  function anvendSkemaData(data, erOpdatering) {
-    ugerData = data.ugerData || {};
-    alleUger = data.alleUger || [];
-    layoutKategorier = data.layoutKategorier || [];
-    fastHwFarve = data.fastHwFarve || "#c4b5fd";
-    tekstFarveMork = data.tekstFarveMork || "#0f172a";
-    alleOpDage = data.alleOpDage || [];
-    alleIndividuelleVagter = data.alleIndividuelleVagter || [];
-    fundneMaaneder = data.fundneMaaneder || {};
-    laeger = data.laeger || [];
-
-    aktueltUgeNrServer = data.aktueltUgeNr || alleUger[0];
-    if (!erOpdatering || !valgtUge || alleUger.indexOf(valgtUge) === -1) {
-      valgtUge = alleUger.indexOf(aktueltUgeNrServer) !== -1 ? aktueltUgeNrServer : alleUger[0];
-    }
-
-    const alleNavne = laeger.map(l => l.navn);
-
-    if (!erOpdatering) {
-      try {
-        const gemtInd = JSON.parse(localStorage.getItem("hk_valgteIndividuelleLaeger") || "null");
-        if (Array.isArray(gemtInd)) {
-          valgteIndividuelleLaeger = gemtInd.filter(n => alleNavne.indexOf(n) !== -1);
-        } else {
-          const gammelEnkelt = localStorage.getItem("hk_individuelLaege");
-          if (gammelEnkelt && alleNavne.indexOf(gammelEnkelt) !== -1) {
-            valgteIndividuelleLaeger = [gammelEnkelt];
-          }
-        }
-        if (valgteIndividuelleLaeger.length === 0 && laeger.length > 0) {
-          valgteIndividuelleLaeger = [laeger[0].navn];
-        }
-
-        const gemtOp = JSON.parse(localStorage.getItem("hk_valgteLaeger") || "null");
-        if (Array.isArray(gemtOp)) {
-          valgteLaeger = gemtOp.filter(n => alleNavne.indexOf(n) !== -1);
-        }
-        if (valgteLaeger.length === 0 && laeger.length > 0) {
-          valgteLaeger = [laeger[0].navn];
-        }
-      } catch (e) {
-        if (laeger.length > 0) {
-          valgteLaeger = [laeger[0].navn];
-          valgteIndividuelleLaeger = [laeger[0].navn];
-        }
-      }
-
-      aktiveFunktionsFiltre = layoutKategorier
-        .map(k => k.id)
-        .filter(id => id !== "fri_ferie");
-    }
-
-    initBrugerflade(aktueltUgeNrServer, erOpdatering);
-    document.getElementById("loadingBox").style.display = "none";
-    skiftSide(aktivSide);
-    visUge(valgtUge);
+  if (params.ical === '1' && params.laege) {
+    return genererIcalFeed(params.laege);
   }
 
-  async function hentSkemaData(erGenindlaesning) {
-    const btnRef = document.getElementById("btnRefresh");
-    if (btnRef) btnRef.innerText = "⏳ Henter...";
+  var ugeParam = params.uge || null;
+  return genererUgeskemaHtml(ugeParam);
+}
 
-    const CACHE_KEY = "hk_skemaData_cache";
-    let harVistFraCache = false;
+function onOpen() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    if (ui) {
+      ui.createMenu('Skema Værktøjer')
+        .addItem('📥 Opdater hovedskema fra Import', 'opdaterFraImportFane')
+        .addSeparator()
+        .addItem('Generer Professionel Ugeoversigt', 'genererUgeoversigtDialog')
+        .addItem('Tjek for ukendte koder', 'tjekForUkendteFunktioner')
+        .addToUi();
+    }
+  } catch (err) {}
+}
 
-    if (!erGenindlaesning) {
-      try {
-        const cachedRaw = localStorage.getItem(CACHE_KEY);
-        if (cachedRaw) {
-          const cachedData = JSON.parse(cachedRaw);
-          anvendSkemaData(cachedData, false);
-          harVistFraCache = true;
-        }
-      } catch (e) {
-        console.warn("Kunne ikke læse cache:", e);
+function genererUgeoversigtDialog() {
+  try {
+    var ui = SpreadsheetApp.getUi();
+    var response = ui.prompt('Generer Ugeoversigt', 'Indtast ugenummer (f.eks. 34):', ui.ButtonSet.OK_CANCEL);
+    if (response.getSelectedButton() === ui.Button.OK) {
+      var ugeNr = response.getResponseText().trim();
+      if (ugeNr && typeof vendSkemaForUge === 'function') {
+        vendSkemaForUge(ugeNr);
       }
     }
+  } catch (err) {}
+}
 
-    try {
-      const resp = await fetch(SCRIPT_URL + "?format=json&t=" + Date.now());
-      if (!resp.ok) throw new Error("Netværksfejl (" + resp.status + ")");
-      const friskData = await resp.json();
+// =================================================================
+// DUMP & KLIK: AUTOMATISK IMPORT FRA 'Import' FANEN
+// =================================================================
+function opdaterFraImportFane() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var importArk = ss.getSheetByName("Import");
+  var målArk = ss.getSheetByName("Kopi af Skema/Kalender generator") || ss.getSheets()[0];
 
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(friskData));
-      } catch (e) {}
+  if (!importArk) {
+    SpreadsheetApp.getUi().alert("Fejl: Der findes ikke et ark/faneblad, der hedder 'Import'. Opret venligst en fane ved navn 'Import'.");
+    return;
+  }
 
-      anvendSkemaData(friskData, harVistFraCache || erGenindlaesning);
-    } catch (err) {
-      console.error("Fejl ved hentning af skema:", err);
-      if (!harVistFraCache) {
-        document.getElementById("loadingBox").innerText = "Fejl ved hentning af skema: " + err;
+  var importData = importArk.getDataRange().getDisplayValues();
+  if (importData.length < 2) {
+    SpreadsheetApp.getUi().alert("Fanen 'Import' er tom eller mangler data.");
+    return;
+  }
+
+  var målData = målArk.getDataRange().getDisplayValues();
+
+  var maanedNavne = ['Januar', 'Februar', 'Marts', 'April', 'Maj', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'December'];
+  var startMaanedTekst = (målData[0] && målData[0][1]) ? målData[0][1].toString().trim().toLowerCase() : '';
+  var startMaanedIndex = 7;
+  for (var m = 0; m < maanedNavne.length; m++) {
+    if (startMaanedTekst.indexOf(maanedNavne[m].toLowerCase()) !== -1) {
+      startMaanedIndex = m;
+      break;
+    }
+  }
+
+  var målDatoMap = {};
+  var lobendeMaanedMål = startMaanedIndex;
+  var forrigeDatoMål = null;
+
+  for (var r = 1; r < målData.length; r++) {
+    var bVal = parseInt((målData[r][1] || '').toString().trim(), 10);
+    var cVal = (målData[r][2] || '').toString().trim();
+    if (!isNaN(bVal) && cVal) {
+      if (forrigeDatoMål !== null && bVal === 1 && forrigeDatoMål > 20) {
+        lobendeMaanedMål = (lobendeMaanedMål + 1) % 12;
       }
-    } finally {
-      if (btnRef) btnRef.innerText = "🔄 Opdater";
+      forrigeDatoMål = bVal;
+      var nøgle = (lobendeMaanedMål + 1) + "_" + bVal;
+      målDatoMap[nøgle] = r + 1;
     }
   }
 
-  function genindlaesSkema() {
-    hentSkemaData(true);
-  }
+  var målKolonnerBogstaver = ['D', 'F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X', 'Z'];
+  var målLaeger = {};
+  målKolonnerBogstaver.forEach(function(bogstav) {
+    var cIndex0 = bogstavTilKolonneIndex(bogstav);
+    if (målData[0] && cIndex0 < målData[0].length) {
+      var init = (målData[0][cIndex0] || '').toString().trim();
+      if (!init && målData[0][cIndex0 + 1]) init = målData[0][cIndex0 + 1].toString().trim();
+      if (!init && målData[0][cIndex0 - 1]) init = målData[0][cIndex0 - 1].toString().trim();
+      if (init) {
+        målLaeger[init.toLowerCase()] = {
+          col: cIndex0 + 1,
+          noteCol: cIndex0 + 2
+        };
+      }
+    }
+  });
 
-  function initBrugerflade(aktueltUgeNr, beholdValg) {
-    const weekDrop = document.getElementById("weekDropdown");
-    weekDrop.innerHTML = alleUger.map(u => 
-      `<option value="${u}">Uge ${u}${u === aktueltUgeNr ? " (I dag)" : ""}</option>`
-    ).join("");
-
-    const mSelectOp = document.getElementById("maanedSelect");
-    const mSelectInd = document.getElementById("maanedSelectIndividuel");
-    const tidligereOpM = beholdValg && mSelectOp.value ? parseInt(mSelectOp.value, 10) : null;
-    const tidligereIndM = beholdValg && mSelectInd.value ? parseInt(mSelectInd.value, 10) : null;
-
-    const mKeys = Object.keys(fundneMaaneder);
-    const defaultMId = fundneMaaneder[iDagMaanedId] ? iDagMaanedId : (mKeys[0] ? parseInt(mKeys[0], 10) : 8);
-
-    const mOptionsOp = mKeys.map(mId => {
-      const target = tidligereOpM || defaultMId;
-      return `<option value="${mId}"${parseInt(mId, 10) === target ? " selected" : ""}>${fundneMaaneder[mId]}</option>`;
-    }).join("");
-
-    const mOptionsInd = mKeys.map(mId => {
-      const target = tidligereIndM || defaultMId;
-      return `<option value="${mId}"${parseInt(mId, 10) === target ? " selected" : ""}>${fundneMaaneder[mId]}</option>`;
-    }).join("");
-
-    mSelectOp.innerHTML = mOptionsOp;
-    mSelectInd.innerHTML = mOptionsInd;
-
-    // Side 2 Lægechips
-    document.getElementById("opDoctorChips").innerHTML = laeger.map(l => {
-      const erValgt = valgteLaeger.indexOf(l.navn) !== -1;
-      return `<button class="chip-btn${erValgt ? " active" : ""}" data-navn="${l.navn}" onclick="toggleLaege('${l.navn}', this)">${l.navn}</button>`;
-    }).join("");
-
-    // Side 3 Lægechips (Multiselect)
-    document.getElementById("indDoctorChips").innerHTML = laeger.map(l => {
-      const erValgt = valgteIndividuelleLaeger.indexOf(l.navn) !== -1;
-      return `<button class="chip-btn ind-laege-chip${erValgt ? " active" : ""}" data-navn="${l.navn}" onclick="toggleIndividuelLaege('${l.navn}', this)">${l.navn}</button>`;
-    }).join("");
-
-    if (!beholdValg) {
-      let filterHtml = layoutKategorier.map(k => {
-        const erAktiv = aktiveFunktionsFiltre.indexOf(k.id) !== -1;
-        return `<span id="ftag_${k.id}" class="filter-tag c-${k.badgeClass}${erAktiv ? " active" : ""}" data-katid="${k.id}" onclick="toggleFunktionsFilter('${k.id}', this)">${k.titel}</span>`;
-      }).join("");
-      filterHtml += `<span id="ftag_syg" class="filter-tag c-syg" data-katid="syg" onclick="toggleFunktionsFilter('syg', this)">Sygdom</span>`;
-      document.getElementById("filterChipsContainer").innerHTML = filterHtml;
+  var importLaeger = [];
+  for (var c = 0; c < importData[0].length; c++) {
+    var rawInit = (importData[0][c] || '').toString().trim();
+    if (rawInit && målLaeger[rawInit.toLowerCase()]) {
+      importLaeger.push({
+        navn: rawInit,
+        importCol: c,
+        målCol: målLaeger[rawInit.toLowerCase()].col,
+        målNoteCol: målLaeger[rawInit.toLowerCase()].noteCol
+      });
     }
   }
 
-  function skiftSide(sideId) {
-    aktivSide = sideId;
-    document.querySelectorAll(".page-view").forEach(p => p.classList.remove("active"));
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.getElementById(sideId).classList.add("active");
-    if (sideId === "sideUgeskema") {
-      document.getElementById("tabBtnUge").classList.add("active");
-    } else if (sideId === "sideOpMaaned") {
-      document.getElementById("tabBtnOp").classList.add("active");
-      opdaterOpVisning();
-    } else if (sideId === "sideIndividuel") {
-      document.getElementById("tabBtnIndividuel").classList.add("active");
-      opdaterIndividuelVisning();
-    }
+  if (importLaeger.length === 0) {
+    SpreadsheetApp.getUi().alert("Kunne ikke matche nogen læger i række 1 på 'Import'-fanen med lægerne i hovedarket.");
+    return;
   }
 
-  function hopTilAktuelUge() {
-    const target = alleUger.indexOf(aktueltUgeNrServer) !== -1 ? aktueltUgeNrServer : alleUger[0];
-    if (target) visUge(target);
-  }
+  var detekteretMaanedId = null;
+  var detekteretMaanedNavn = "";
+  var opdateredeDage = 0;
 
-  function hopTilUgeFraKalender(ugeNr) {
-    if (!ugeNr || alleUger.indexOf(ugeNr) === -1) return;
-    skiftSide("sideUgeskema");
-    visUge(ugeNr);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function skiftMaanedRelativt(selectId, retning, erOpSide) {
-    const sel = document.getElementById(selectId);
-    const nyIdx = sel.selectedIndex + retning;
-    if (nyIdx >= 0 && nyIdx < sel.options.length) {
-      sel.selectedIndex = nyIdx;
-      if (erOpSide) opdaterOpVisning();
-      else opdaterIndividuelVisning();
-    }
-  }
-
-  function hopTilAktuelMaaned(selectId, erOpSide) {
-    const sel = document.getElementById(selectId);
-    for (let i = 0; i < sel.options.length; i++) {
-      if (parseInt(sel.options[i].value, 10) === iDagMaanedId) {
-        sel.selectedIndex = i;
+  for (var cScan = 0; cScan < Math.min(importData[0].length, 5); cScan++) {
+    var scanTxt = (importData[0][cScan] || '').toString().toLowerCase();
+    for (var mIndex = 0; mIndex < maanedNavne.length; mIndex++) {
+      if (scanTxt.indexOf(maanedNavne[mIndex].toLowerCase()) !== -1) {
+        detekteretMaanedId = mIndex + 1;
+        detekteretMaanedNavn = maanedNavne[mIndex];
         break;
       }
     }
-    if (erOpSide) opdaterOpVisning();
-    else opdaterIndividuelVisning();
+    if (detekteretMaanedId) break;
   }
 
-  function opdaterMaanedKnapper(selectId, prevBtnId, nextBtnId) {
-    const sel = document.getElementById(selectId);
-    const prevBtn = document.getElementById(prevBtnId);
-    const nextBtn = document.getElementById(nextBtnId);
-    if (!sel || !prevBtn || !nextBtn) return;
-    prevBtn.classList.toggle("disabled", sel.selectedIndex <= 0);
-    nextBtn.classList.toggle("disabled", sel.selectedIndex >= sel.options.length - 1);
-  }
-
-  function visNoteToast(e, noteTekst, titelTekst) {
-    if (e) e.stopPropagation();
-    document.getElementById("noteToastTitle").innerText = titelTekst || "Bemærkning";
-    document.getElementById("noteToastBody").innerText = noteTekst;
-    document.getElementById("noteToast").style.display = "block";
-  }
-
-  function lukNoteToast() {
-    document.getElementById("noteToast").style.display = "none";
-  }
-
-  document.addEventListener("click", function() {
-    lukNoteToast();
-  });
-
-  function visUge(ugeNr) {
-    valgtUge = ugeNr;
-    const uData = ugerData[ugeNr];
-    if (!uData) return;
-    const dage = uData.dage;
-    const matrix = uData.matrix;
-    const maanedStr = uData.maaneder.join(" / ");
-    let datoPeriodeTekst = "Uge " + ugeNr;
-    if (dage.length > 0) {
-      datoPeriodeTekst += "  |  " + dage[0].ugedag + " d. " + dage[0].dato + " — " + dage[dage.length - 1].ugedag + " d. " + dage[dage.length - 1].dato;
-    }
-
-    let out = `<div class="header-box">
-      <h1 class="title">HÅNDKIRURGISK SEKTION — SLAGELSE SYGEHUS</h1>
-      <div class="subtitle">
-        <span class="month-badge">📅 ${maanedStr}</span>
-        <span>${datoPeriodeTekst} &nbsp;(Live opdateret)</span>
-      </div>
-    </div>
-    <div class="table-wrapper"><table><thead><tr><th class="col-funktion">FUNKTION</th>`;
-
-    dage.forEach(d => {
-      const erIDag = (d.dato === iDagNummer && d.maanedId === iDagMaanedId);
-      const thCls = erIDag ? ` class="today-col-head"` : "";
-      const datoTekst = erIDag ? `<span class="today-badge">${d.dato}</span>` : d.dato;
-      out += `<th${thCls}>${d.ugedag.toUpperCase()}<br>${datoTekst}</th>`;
-    });
-    out += `</tr></thead><tbody>`;
-
-    layoutKategorier.forEach(kat => {
-      out += `<tr><td class="col-funktion" style="background-color:${kat.titelBg}; color:${tekstFarveMork};">${kat.titel}</td>`;
-      for (let d = 0; d < dage.length; d++) {
-        const isWeekend = dage[d].erWeekend;
-        const erIDag = (dage[d].dato === iDagNummer && dage[d].maanedId === iDagMaanedId);
-        const tdCls = erIDag ? ` class="today-col"` : "";
-        const personer = matrix[kat.id][d] || [];
-        if (personer.length > 0) {
-          const personerHtml = personer.map(p => {
-            const harNote = p.note && p.note.trim() !== "";
-            if (harNote) {
-              const safeNote = p.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-              const safeTitle = (p.tekst + " (" + kat.titel + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-              return `<span class="cell-item has-tooltip" data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')">${p.tekst} <span class="note-icon">ⓘ</span></span>`;
-            }
-            return `<span class="cell-item">${p.tekst}</span>`;
-          }).join("<br>");
-          const bg = isWeekend ? fastHwFarve : kat.hverdagBg;
-          out += `<td${tdCls} style="background-color:${bg}; color:${tekstFarveMork}; font-weight:600;">${personerHtml}</td>`;
-        } else {
-          const emptyBg = isWeekend ? "#f1f5f9" : kat.hverdagBg;
-          out += `<td${tdCls} style="background-color:${emptyBg};"></td>`;
+  if (!detekteretMaanedId) {
+    for (var rScan = 1; rScan < importData.length; rScan++) {
+      var rTekst = (importData[rScan][0] + " " + importData[rScan][1] + " " + importData[rScan][2]).toLowerCase();
+      for (var mIdx = 0; mIdx < maanedNavne.length; mIdx++) {
+        if (rTekst.indexOf(maanedNavne[mIdx].toLowerCase()) !== -1) {
+          detekteretMaanedId = mIdx + 1;
+          detekteretMaanedNavn = maanedNavne[mIdx];
+          break;
         }
       }
-      out += `</tr>`;
-    });
-
-    out += `</tbody></table></div>`;
-    document.getElementById("dynamiskUgeContainer").innerHTML = out;
-    document.getElementById("weekDropdown").value = ugeNr;
-
-    const idx = alleUger.indexOf(ugeNr);
-    document.getElementById("btnPrev").classList.toggle("disabled", idx <= 0);
-    document.getElementById("btnNext").classList.toggle("disabled", idx >= alleUger.length - 1);
-  }
-
-  function skiftUgeRelativt(retning) {
-    const idx = alleUger.indexOf(valgtUge);
-    const nyIdx = idx + retning;
-    if (nyIdx >= 0 && nyIdx < alleUger.length) {
-      visUge(alleUger[nyIdx]);
+      if (detekteretMaanedId) break;
     }
   }
 
-  /* SIDE 2: OP & OVERLAP LOGIK */
-  function toggleLaege(navn, btn) {
-    const pos = valgteLaeger.indexOf(navn);
-    if (pos !== -1) {
-      valgteLaeger.splice(pos, 1);
-      btn.classList.remove("active");
-    } else {
-      valgteLaeger.push(navn);
-      btn.classList.add("active");
-    }
-    try { localStorage.setItem("hk_valgteLaeger", JSON.stringify(valgteLaeger)); } catch (e) {}
-    opdaterOpVisning();
+  if (!detekteretMaanedId) {
+    detekteretMaanedId = (new Date()).getMonth() + 1;
+    detekteretMaanedNavn = maanedNavne[detekteretMaanedId - 1];
   }
 
-  function vaelgAlleLaeger(val) {
-    valgteLaeger = [];
-    document.querySelectorAll("#sideOpMaaned .chip-btn").forEach(btn => {
-      if (val) {
-        valgteLaeger.push(btn.getAttribute("data-navn"));
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
+  for (var rImp = 1; rImp < importData.length; rImp++) {
+    var datoNr = parseInt((importData[rImp][1] || '').toString().trim(), 10);
+    if (isNaN(datoNr)) continue;
+
+    var sogeNøgle = detekteretMaanedId + "_" + datoNr;
+    var målRow = målDatoMap[sogeNøgle];
+
+    if (målRow) {
+      opdateredeDage++;
+      importLaeger.forEach(function(l) {
+        var importFunktion = (importData[rImp][l.importCol] || '').toString().trim();
+        var importNote = (importData[rImp][l.importCol + 1] || '').toString().trim();
+
+        målArk.getRange(målRow, l.målCol).setValue(importFunktion);
+        if (importNote) {
+          målArk.getRange(målRow, l.målNoteCol).setValue(importNote);
+        }
+      });
+    }
+  }
+
+  tjekForUkendteFunktioner();
+  SpreadsheetApp.getUi().alert("✅ Succes!\n\n" + detekteretMaanedNavn + " er opdateret i hovedarket for " + importLaeger.length + " læger (" + opdateredeDage + " dage overført).");
+}
+
+function splitFunktionsKode(celleTekst) {
+  var raw = (celleTekst || '').toString().trim();
+  if (raw.indexOf('/') !== -1) {
+    var dele = raw.split('/');
+    return {
+      renKode: dele[0].trim().toLowerCase(),
+      supervisor: dele.slice(1).join('/').trim().toUpperCase()
+    };
+  }
+  return {
+    renKode: raw.toLowerCase(),
+    supervisor: ''
+  };
+}
+
+/**
+ * HOVEDFUNKTION FOR WEBAPPEN
+ */
+function genererUgeskemaHtml(valgtUge) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var kildeArk = ss.getSheetByName("Kopi af Skema/Kalender generator") || ss.getSheets()[0];
+  var data = kildeArk.getDataRange().getDisplayValues();
+
+  var maanedNavne = ['Januar', 'Februar', 'Marts', 'April', 'Maj', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'December'];
+
+  var startMaanedTekst = (data[0] && data[0][1]) ? data[0][1].toString().trim().toLowerCase() : '';
+  var startMaanedIndex = 7;
+  for (var m = 0; m < maanedNavne.length; m++) {
+    if (startMaanedTekst.indexOf(maanedNavne[m].toLowerCase()) !== -1) {
+      startMaanedIndex = m;
+      break;
+    }
+  }
+
+  var målKolonnerBogstaver = ['D', 'F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X', 'Z'];
+  var laeger = [];
+  målKolonnerBogstaver.forEach(function(bogstav) {
+    var cIndex = bogstavTilKolonneIndex(bogstav);
+    if (data[0] && cIndex < data[0].length) {
+      var init = data[0][cIndex] ? data[0][cIndex].toString().trim() : '';
+      if (!init && data[0][cIndex + 1]) init = data[0][cIndex + 1].toString().trim();
+      if (!init && data[0][cIndex - 1]) init = data[0][cIndex - 1].toString().trim();
+      if (init) {
+        laeger.push({ colIndex: cIndex, navn: init });
       }
-    });
-    try { localStorage.setItem("hk_valgteLaeger", JSON.stringify(valgteLaeger)); } catch (e) {}
-    opdaterOpVisning();
-  }
-
-  function opdaterOpVisning() {
-    opdaterMaanedKnapper("maanedSelect", "btnPrevMaanedOp", "btnNextMaanedOp");
-    const mId = parseInt(document.getElementById("maanedSelect").value, 10);
-    const container = document.getElementById("kalenderContainer");
-    if (valgteLaeger.length === 0) {
-      container.innerHTML = `<div class="op-empty">Vælg mindst én person ovenfor for at se månedskalenderen.</div>`;
-      document.getElementById("opStatusBadge").innerText = "0 valgt";
-      return;
     }
-    const filtreret = alleOpDage.filter(item => item.maanedId === mId && valgteLaeger.indexOf(item.laege) !== -1);
-    document.getElementById("opStatusBadge").innerText = filtreret.length + " OP-vagt" + (filtreret.length === 1 ? "" : "er");
-    const posterPrDato = {};
-    filtreret.forEach(item => {
-      if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];
-      posterPrDato[item.dato].push(item);
-    });
-    container.innerHTML = bygKalenderHtml(mId, posterPrDato, true);
-  }
+  });
 
-  /* SIDE 3: MULTISELECT LOGIK */
-  function toggleIndividuelLaege(navn, btn) {
-    const pos = valgteIndividuelleLaeger.indexOf(navn);
-    if (pos !== -1) {
-      valgteIndividuelleLaeger.splice(pos, 1);
-      btn.classList.remove("active");
-    } else {
-      valgteIndividuelleLaeger.push(navn);
-      btn.classList.add("active");
-    }
-    try { localStorage.setItem("hk_valgteIndividuelleLaeger", JSON.stringify(valgteIndividuelleLaeger)); } catch (e) {}
-    opdaterIndividuelVisning();
-  }
+  var layoutKategorier = [
+    { id: 'hdv',       titel: 'HDV',             titelBg: '#f59e0b', hverdagBg: '#fde68a', badgeClass: 'hdv' },
+    { id: 'op10',      titel: 'OP10',            titelBg: '#f87171', hverdagBg: '#fecaca', badgeClass: 'op10' },
+    { id: 'op21',      titel: 'OP21',            titelBg: '#38bdf8', hverdagBg: '#bae6fd', badgeClass: 'op21' },
+    { id: 'op23',      titel: 'OP23',            titelBg: '#60a5fa', hverdagBg: '#bfdbfe', badgeClass: 'op23' },
+    { id: 'hopa',      titel: 'HOPA',            titelBg: '#2dd4bf', hverdagBg: '#99f6e4', badgeClass: 'hopa' },
+    { id: 'hlaamb',    titel: 'LA leje',         titelBg: '#a8a29e', hverdagBg: '#e7e5e4', badgeClass: 'hlaamb' },
+    { id: 'amb',       titel: 'Ambulatorie',     titelBg: '#4ade80', hverdagBg: '#bbf7d0', badgeClass: 'amb' },
+    { id: 'hambl',     titel: 'Hambl',           titelBg: '#94a3b8', hverdagBg: '#cbd5e1', badgeClass: 'hambl' },
+    { id: 'heamb',     titel: 'Heamb',           titelBg: '#fb923c', hverdagBg: '#fed7aa', badgeClass: 'heamb' },
+    { id: 'fokus_mv',  titel: 'Fokusist / MV',   titelBg: '#c084fc', hverdagBg: '#e9d5ff', badgeClass: 'fokus_mv' },
+    { id: 'adm',       titel: 'Adm',             titelBg: '#facc15', hverdagBg: '#fef08a', badgeClass: 'adm' },
+    { id: 'kursus',    titel: 'Kursus',          titelBg: '#94a3b8', hverdagBg: '#e2e8f0', badgeClass: 'kursus' },
+    { id: 'fri_ferie', titel: 'Fri / Ferie / Omsorg', titelBg: '#f472b6', hverdagBg: '#fbcfe8', badgeClass: 'fri_ferie' },
+    { id: 'syg',       titel: 'Sygdom',          titelBg: '#e2e8f0', hverdagBg: '#fef08a', badgeClass: 'syg' }
+  ];
 
-  function vaelgAlleIndividuelleLaeger(val) {
-    valgteIndividuelleLaeger = [];
-    document.querySelectorAll("#sideIndividuel .ind-laege-chip").forEach(btn => {
-      if (val) {
-        valgteIndividuelleLaeger.push(btn.getAttribute("data-navn"));
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
+  var fastHwFarve = '#c4b5fd';
+  var tekstFarveMork = '#0f172a';
+
+  var ugerData = {};
+  var alleUgerFundet = [];
+  var nuvaerendeUgeNr = null;
+  var alleOpDage = [];
+  var alleIndividuelleVagter = [];
+  var fundneMaaneder = {};
+
+  var lobendeMaanedIndex = startMaanedIndex;
+  var forrigeDatoNr = null;
+
+  for (var r = 1; r < data.length; r++) {
+    var colA = (data[r][0] || '').toString().trim();
+    var match = colA.match(/^uge\s*(\d+)/i);
+    if (match) {
+      nuvaerendeUgeNr = parseInt(match[1], 10);
+      if (alleUgerFundet.indexOf(nuvaerendeUgeNr) === -1) {
+        alleUgerFundet.push(nuvaerendeUgeNr);
+        ugerData[nuvaerendeUgeNr] = {
+          dage: [],
+          maaneder: [],
+          matrix: {}
+        };
+        layoutKategorier.forEach(function(kat) {
+          ugerData[nuvaerendeUgeNr].matrix[kat.id] = [];
+        });
       }
-    });
-    try { localStorage.setItem("hk_valgteIndividuelleLaeger", JSON.stringify(valgteIndividuelleLaeger)); } catch (e) {}
-    opdaterIndividuelVisning();
-  }
-
-  function toggleFunktionsFilter(katId, el) {
-    const idx = aktiveFunktionsFiltre.indexOf(katId);
-    if (idx !== -1) {
-      aktiveFunktionsFiltre.splice(idx, 1);
-      el.classList.remove("active");
-    } else {
-      aktiveFunktionsFiltre.push(katId);
-      el.classList.add("active");
     }
-    opdaterIndividuelVisning();
-  }
 
-  function toggleAlleFiltre(val) {
-    aktiveFunktionsFiltre = [];
-    document.querySelectorAll(".filter-tag").forEach(tag => {
-      const kId = tag.getAttribute("data-katid");
-      if (val) {
-        aktiveFunktionsFiltre.push(kId);
-        tag.classList.add("active");
-      } else {
-        tag.classList.remove("active");
+    if (nuvaerendeUgeNr && ugerData[nuvaerendeUgeNr]) {
+      var colB = (data[r][1] || '').toString().trim();
+      var colC = (data[r][2] || '').toString().trim();
+      var ugedag = colC || colB;
+      var datoNr = parseInt(colB, 10);
+
+      if (ugedag && !isNaN(datoNr)) {
+        if (forrigeDatoNr !== null && datoNr === 1 && forrigeDatoNr > 20) {
+          lobendeMaanedIndex = (lobendeMaanedIndex + 1) % 12;
+        }
+        forrigeDatoNr = datoNr;
+
+        var mId = lobendeMaanedIndex + 1;
+        var mNavn = maanedNavne[lobendeMaanedIndex];
+        fundneMaaneder[mId] = mNavn;
+
+        var renUgedag = ugedag.toLowerCase();
+        var erWeekend = (renUgedag.indexOf('lør') !== -1 || renUgedag.indexOf('søn') !== -1);
+        
+        var dagIndex = ugerData[nuvaerendeUgeNr].dage.length;
+
+        if (ugerData[nuvaerendeUgeNr].maaneder.indexOf(mNavn) === -1) {
+          ugerData[nuvaerendeUgeNr].maaneder.push(mNavn);
+        }
+
+        ugerData[nuvaerendeUgeNr].dage.push({
+          ugedag: ugedag.charAt(0).toUpperCase() + ugedag.slice(1).toLowerCase(),
+          dato: datoNr,
+          erWeekend: erWeekend,
+          maanedNavn: mNavn,
+          maanedId: mId
+        });
+
+        layoutKategorier.forEach(function(kat) {
+          ugerData[nuvaerendeUgeNr].matrix[kat.id][dagIndex] = [];
+        });
+
+        laeger.forEach(function(laege) {
+          var celleTekst = (data[r][laege.colIndex] || '').toString().trim();
+          var rawNoteTekst = (data[r][laege.colIndex + 1] || '').toString().trim();
+
+          var parseRes = splitFunktionsKode(celleTekst);
+          var renKode = parseRes.renKode;
+          var supervisor = parseRes.supervisor;
+
+          var noteTekst = rawNoteTekst;
+          var renNote = rawNoteTekst.toLowerCase().replace(/[^a-z]/g, '');
+          if (renNote === 'laleje' || renNote === 'hlaamb') {
+            noteTekst = '';
+          }
+
+          var m = ugerData[nuvaerendeUgeNr].matrix;
+
+          var visningsNavn = laege.navn;
+          if (supervisor) {
+            visningsNavn += ' (v/ ' + supervisor + ')';
+          }
+
+          var samletTekst = (celleTekst + ' ' + rawNoteTekst).toLowerCase();
+          var harFokus = samletTekst.indexOf('fokus') !== -1;
+          var harMv = /\b(mv|mellemvagt)\b/i.test(samletTekst);
+
+          if (harFokus || harMv) {
+            var rolle = (harFokus && harMv) ? 'Fokusist/MV' : (harFokus ? 'Fokusist' : 'MV');
+            m['fokus_mv'][dagIndex].push({
+              tekst: rolle + ' (' + laege.navn + ')',
+              note: noteTekst
+            });
+            
+            alleIndividuelleVagter.push({
+              laege: laege.navn,
+              katId: 'fokus_mv',
+              label: rolle,
+              note: noteTekst,
+              uge: nuvaerendeUgeNr,
+              ugedag: ugedag.charAt(0).toUpperCase() + ugedag.slice(1).toLowerCase(),
+              erWeekend: erWeekend,
+              dato: datoNr,
+              maanedId: mId
+            });
+          }
+
+          if (renKode !== '') {
+            var erOp = false;
+            var opLabel = '';
+            var indLabel = '';
+            var indKatId = '';
+
+            if (erWeekend) {
+              if (renKode === 'hw') {
+                m['op10'][dagIndex].push({ tekst: visningsNavn + ' (hw)', note: noteTekst });
+                erOp = true; opLabel = 'OP10 (hw)';
+                indLabel = 'OP10 (hw)'; indKatId = 'op10';
+              }
+            } else {
+              if (renKode === 'hdv') {
+                m['hdv'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = 'HDV'; indKatId = 'hdv';
+              } else if (renKode === 'h10op' || renKode === 'op10') {
+                m['op10'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                erOp = true; opLabel = 'OP10';
+                indLabel = supervisor ? ('OP10 (v/ ' + supervisor + ')') : 'OP10'; 
+                indKatId = 'op10';
+              } else if (renKode === 'hw') {
+                m['op10'][dagIndex].push({ tekst: visningsNavn + ' (hw)', note: noteTekst });
+                erOp = true; opLabel = 'OP10 (hw)';
+                indLabel = 'OP10 (hw)'; indKatId = 'op10';
+              } else if (renKode === 'h21op' || renKode === 'op21') {
+                m['op21'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                erOp = true; opLabel = 'OP21';
+                indLabel = supervisor ? ('OP21 (v/ ' + supervisor + ')') : 'OP21'; 
+                indKatId = 'op21';
+              } else if (renKode === 'h22op' || renKode === 'op22') {
+                erOp = true; opLabel = 'OP22';
+                indLabel = supervisor ? ('OP22 (v/ ' + supervisor + ')') : 'OP22'; 
+                indKatId = 'op21';
+              } else if (renKode === 'h23op' || renKode === 'op23') {
+                m['op23'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                erOp = true; opLabel = 'OP23';
+                indLabel = supervisor ? ('OP23 (v/ ' + supervisor + ')') : 'OP23'; 
+                indKatId = 'op23';
+              } else if (renKode === 'hopa') {
+                m['hopa'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                erOp = true; opLabel = 'HOPA';
+                indLabel = supervisor ? ('HOPA (v/ ' + supervisor + ')') : 'HOPA'; 
+                indKatId = 'hopa';
+              } else if (renKode === 'hlaamb') {
+                m['hlaamb'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                erOp = true; opLabel = 'LA leje';
+                indLabel = supervisor ? ('LA leje (v/ ' + supervisor + ')') : 'LA leje'; 
+                indKatId = 'hlaamb';
+              } else if (renKode === 'hamb1' || renKode === 'hamb2' || renKode === 'hamb3' || (renKode.indexOf('amb') !== -1 && renKode !== 'hambl' && renKode !== 'heamb')) {
+                m['amb'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = supervisor ? ('Ambulatorie (v/ ' + supervisor + ')') : 'Ambulatorie'; 
+                indKatId = 'amb';
+              } else if (renKode === 'hambl') {
+                m['hambl'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = supervisor ? ('Hambl (v/ ' + supervisor + ')') : 'Hambl'; 
+                indKatId = 'hambl';
+              } else if (renKode === 'heamb') {
+                m['heamb'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = supervisor ? ('Heamb (v/ ' + supervisor + ')') : 'Heamb'; 
+                indKatId = 'heamb';
+              } else if (renKode === 'hadm' || renKode === 'ad') {
+                m['adm'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = 'Adm'; indKatId = 'adm';
+              } else if (renKode === 'kursus' || renKode === 'sh') {
+                m['kursus'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = 'Kursus'; indKatId = 'kursus';
+              } else if (renKode === 'fri' || renKode === 'fe' || renKode === 'ferie' || renKode === 'f') {
+                m['fri_ferie'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = 'Fri/Ferie'; indKatId = 'fri_ferie';
+              } else if (renKode === 'oms' || renKode === 'omsorgsdag') {
+                m['fri_ferie'][dagIndex].push({ tekst: visningsNavn + ' (Omsorg)', note: noteTekst });
+                indLabel = 'Omsorgsdag'; indKatId = 'fri_ferie';
+              } else if (renKode === 'syg') {
+                m['syg'][dagIndex].push({ tekst: visningsNavn, note: noteTekst });
+                indLabel = 'Syg'; indKatId = 'syg';
+              }
+            }
+
+            if (erOp) {
+              alleOpDage.push({
+                laege: laege.navn,
+                opType: opLabel,
+                supervisor: supervisor,
+                note: noteTekst,
+                uge: nuvaerendeUgeNr,
+                ugedag: ugedag.charAt(0).toUpperCase() + ugedag.slice(1).toLowerCase(),
+                erWeekend: erWeekend,
+                dato: datoNr,
+                maanedId: mId,
+                maanedNavn: mNavn
+              });
+            }
+
+            if (indKatId !== '') {
+              alleIndividuelleVagter.push({
+                laege: laege.navn,
+                katId: indKatId,
+                label: indLabel,
+                supervisor: supervisor,
+                note: noteTekst,
+                uge: nuvaerendeUgeNr,
+                ugedag: ugedag.charAt(0).toUpperCase() + ugedag.slice(1).toLowerCase(),
+                erWeekend: erWeekend,
+                dato: datoNr,
+                maanedId: mId
+              });
+            }
+          }
+        });
       }
-    });
-    opdaterIndividuelVisning();
+    }
   }
 
-  function vaelgKunOpFunktioner() {
-    aktiveFunktionsFiltre = opKatIds.slice();
-    document.querySelectorAll(".filter-tag").forEach(tag => {
-      const kId = tag.getAttribute("data-katid");
-      tag.classList.toggle("active", opKatIds.indexOf(kId) !== -1);
-    });
-    opdaterIndividuelVisning();
+  if (alleUgerFundet.length === 0) {
+    return HtmlService.createHtmlOutput("<h3 style='font-family:sans-serif;text-align:center;'>Ingen uger fundet i arket.</h3>");
   }
 
-  function vaelgKunAmbFunktioner() {
-    aktiveFunktionsFiltre = ambKatIds.slice();
-    document.querySelectorAll(".filter-tag").forEach(tag => {
-      const kId = tag.getAttribute("data-katid");
-      tag.classList.toggle("active", ambKatIds.indexOf(kId) !== -1);
-    });
-    opdaterIndividuelVisning();
+  var aktueltUgeNrIDag = hentAktueltUgenummer();
+  var startUge = valgtUge ? parseInt(valgtUge, 10) : aktueltUgeNrIDag;
+  if (alleUgerFundet.indexOf(startUge) === -1) {
+    startUge = alleUgerFundet[0];
+  }
+  var aktivMaanedId = (new Date()).getMonth() + 1;
+  if (!fundneMaaneder[aktivMaanedId]) {
+    var foersteM = Object.keys(fundneMaaneder)[0];
+    if (foersteM) aktivMaanedId = parseInt(foersteM, 10);
   }
 
-  function opdaterIndividuelVisning() {
-    opdaterMaanedKnapper("maanedSelectIndividuel", "btnPrevMaanedInd", "btnNextMaanedInd");
-    const mId = parseInt(document.getElementById("maanedSelectIndividuel").value, 10);
-    const container = document.getElementById("individuelKalenderContainer");
+  var nuDato = new Date();
+  var iDagNummer = nuDato.getDate();
+  var iDagMaanedId = nuDato.getMonth() + 1;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
+  html += '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">';
+  html += '<title>Håndkirurgisk Sektion</title>';
+  
+  html += '<meta name="apple-mobile-web-app-capable" content="yes">';
+  html += '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
+  html += '<meta name="apple-mobile-web-app-title" content="Håndkirurgi">';
+  html += '<meta name="mobile-web-app-capable" content="yes">';
+  html += '<meta name="theme-color" content="#0284c7">';
+
+  html += '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">';
+  html += '<style>';
+  html += 'body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 12px; color: #0f172a; -webkit-tap-highlight-color: transparent; }';
+  html += '.container { max-width: 1280px; margin: 0 auto; background: #ffffff; padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }';
+  
+  html += '.main-tab-bar { display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; flex-wrap: wrap; }';
+  html += '.tab-btn { flex: 1; min-width: 140px; padding: 9px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 8px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; text-align: center; transition: all 0.15s ease; }';
+  html += '.tab-btn:hover { background: #f1f5f9; color: #0f172a; }';
+  html += '.tab-btn.active { background: #e0f2fe; color: #0369a1; border-color: #38bdf8; font-weight: 700; box-shadow: 0 1px 3px rgba(2,132,199,0.15); }';
+
+  html += '.nav-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; background: #f8fafc; padding: 9px 12px; border-radius: 8px; border: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px; }';
+  html += '.nav-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }';
+  html += '.nav-btn { display: inline-flex; align-items: center; justify-content: center; background: #0284c7; color: #ffffff; padding: 7px 12px; font-size: 0.83rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: background 0.15s ease; white-space: nowrap; }';
+  html += '.nav-btn:hover:not(.disabled) { background: #0369a1; }';
+  html += '.nav-btn.disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }';
+  html += '.nav-btn-today { background: #ffffff; color: #0369a1; border: 1px solid #0284c7; padding: 6px 10px; font-size: 0.80rem; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }';
+  html += '.nav-btn-today:hover { background: #e0f2fe; }';
+  html += '.week-select { font-size: 0.88rem; font-weight: 600; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; cursor: pointer; }';
+  
+  html += '.header-box { margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }';
+  html += '.title { font-size: 1.12rem; font-weight: 700; color: #0f172a; margin: 0; }';
+  html += '.subtitle { font-size: 0.82rem; color: #64748b; margin-top: 4px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }';
+  html += '.month-badge { display: inline-flex; align-items: center; background: #e0e7fe; color: #0369a1; font-weight: 700; font-size: 0.78rem; padding: 3px 8px; border-radius: 6px; border: 1px solid #bae6fd; }';
+
+  html += '.table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; border: 1px solid #cbd5e1; scroll-behavior: smooth; }';
+  html += 'table { border-collapse: collapse; width: 100%; min-width: 760px; text-align: center; }';
+  html += 'th, td { border: 1px solid #94a3b8; padding: 8px 5px; font-size: 0.82rem; vertical-align: middle; line-height: 1.35; color: #0f172a; }';
+  html += 'th { font-weight: 700; background-color: #f1f5f9; color: #0f172a; padding: 8px 5px; font-size: 0.82rem; border-bottom: 2px solid #94a3b8; }';
+  html += 'td.col-funktion { font-weight: 600; width: 190px; border-right: 2px solid #64748b; font-size: 0.83rem; text-align: left; padding-left: 10px; }';
+
+  /* I dag markering */
+  html += 'th.today-col-head { background: #bae6fd !important; border-top: 3px solid #0284c7 !important; border-bottom: 3px solid #0284c7 !important; }';
+  html += '.today-badge { display: inline-block; border: 2px solid #0284c7; background: #0284c7; color: #ffffff; border-radius: 50%; width: 22px; height: 22px; line-height: 22px; text-align: center; font-weight: 800; box-shadow: 0 1px 3px rgba(2,132,199,0.3); }';
+  html += 'td.today-col { border-left: 2px solid #0284c7 !important; border-right: 2px solid #0284c7 !important; }';
+  html += '.cal-cell.today-cell { border: 2px solid #0284c7 !important; background: #f0f9ff !important; }';
+  html += '.today-ring { border: 2px solid #0284c7; background: #0284c7; color: #ffffff !important; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }';
+  
+  html += '.page-view { display: none; }';
+  html += '.page-view.active { display: block; }';
+  
+  html += '.doctor-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; padding: 8px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; align-items: center; }';
+  html += '.chip-btn { padding: 6px 11px; font-size: 0.82rem; font-weight: 600; border-radius: 20px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: all 0.15s ease; user-select: none; }';
+  html += '.chip-btn:hover { background: #f1f5f9; }';
+  html += '.chip-btn.active { background: #0284c7; color: #ffffff; border-color: #0284c7; box-shadow: 0 1px 3px rgba(2,132,199,0.25); }';
+  html += '.chip-action-btn { padding: 5px 9px; font-size: 0.76rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; transition: background 0.15s ease; }';
+  html += '.chip-action-btn:hover { background: #f1f5f9; }';
+  html += '.btn-ical { background: #0284c7 !important; color: #ffffff !important; border: none !important; font-weight: 600 !important; }';
+
+  html += '.filter-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }';
+  html += '.filter-title { font-size: 0.80rem; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }';
+  html += '.filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }';
+  html += '.filter-tag { padding: 4px 8px; border-radius: 5px; font-size: 0.74rem; font-weight: 600; cursor: pointer; border: 1px solid #cbd5e1; opacity: 0.40; transition: all 0.15s ease; user-select: none; }';
+  html += '.filter-tag.active { opacity: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.06); border-color: transparent; }';
+
+  html += '.calendar-grid-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid #cbd5e1; }';
+  html += '.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); background: #e2e8f0; gap: 1px; min-width: 910px; }';
+  html += '.cal-head { background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.80rem; text-align: center; padding: 8px 4px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }';
+  html += '.cal-cell { background: #ffffff; min-height: 100px; padding: 6px; display: flex; flex-direction: column; transition: background 0.1s; position: relative; }';
+  html += '.cal-cell.empty { background: #f8fafc; opacity: 0.5; }';
+  html += '.cal-cell.weekend { background: #fafafa; }';
+  html += '.cal-cell.overlap-day { background: #fffbeb !important; border: 2px solid #f59e0b; }';
+  html += '.cal-date-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }';
+  html += '.cal-date-num { font-size: 0.86rem; font-weight: 700; color: #475569; }';
+  html += '.overlap-pill { font-size: 0.65rem; font-weight: 800; background: #f59e0b; color: #ffffff; padding: 1px 5px; border-radius: 4px; letter-spacing: 0.3px; }';
+
+  html += '.cell-item { display: inline-flex; align-items: center; justify-content: center; position: relative; }';
+  html += '.has-tooltip { cursor: help; border-bottom: 1px dashed rgba(15, 23, 42, 0.4); }';
+  html += '.has-tooltip:hover::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #f8fafc; padding: 5px 8px; border-radius: 5px; font-size: 0.74rem; font-weight: 500; white-space: normal; width: max-content; max-width: 170px; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); pointer-events: none; line-height: 1.3; text-align: center; }';
+  html += '.has-tooltip:hover::before { content: ""; position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #0f172a; z-index: 101; pointer-events: none; }';
+  html += '.note-icon { font-size: 0.65rem; opacity: 0.75; margin-left: 3px; font-weight: 700; }';
+
+  html += '.cal-events { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }';
+  html += '.cal-event { padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; line-height: 1.25; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.03); position: relative; }';
+
+  html += '.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px); }';
+  html += '.modal-box { background: #ffffff; border-radius: 12px; max-width: 540px; width: 100%; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; max-height: 90vh; overflow-y: auto; text-align: left; }';
+  html += '.modal-title { font-size: 1.10rem; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }';
+  html += '.link-input-box { display: flex; gap: 8px; margin: 10px 0 14px 0; }';
+  html += '.link-input { flex: 1; padding: 7px 10px; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155; font-family: monospace; }';
+  html += '.guide-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }';
+  html += '.guide-step { font-size: 0.82rem; color: #334155; line-height: 1.4; margin: 3px 0; }';
+
+  html += '.c-hdv { background: #fef3c7; color: #92400e; border-color: #f59e0b; }';
+  html += '.c-op10 { background: #fee2e2; color: #991b1b; border-color: #ef4444; }';
+  html += '.c-op21 { background: #e0f2fe; color: #075985; border-color: #0284c7; }';
+  html += '.c-op23 { background: #dbeafe; color: #1e40af; border-color: #3b82f6; }';
+  html += '.c-hopa { background: #ccfbf1; color: #115e59; border-color: #14b8a6; }';
+  html += '.c-hlaamb { background: #e7e5e4; color: #292524; border-color: #78716c; }';
+  html += '.c-fokus_mv { background: #f3e8ff; color: #6b21a8; border-color: #a855f7; }';
+  html += '.c-amb { background: #dcfce7; color: #166534; border-color: #22c55e; }';
+  html += '.c-hambl { background: #f1f5f9; color: #334155; border-color: #64748b; }';
+  html += '.c-heamb { background: #ffedd5; color: #9a3412; border-color: #f97316; }';
+  html += '.c-adm { background: #fef9c3; color: #854d0e; border-color: #eab308; }';
+  html += '.c-kursus { background: #e2e8f0; color: #334155; border-color: #94a3b8; }';
+  html += '.c-fri_ferie { background: #fce7f3; color: #9d174d; border-color: #ec4899; }';
+  html += '.c-syg { background: #fef9c3; color: #a16207; border-color: #eab308; }';
+
+  html += '.op-empty { padding: 30px 16px; text-align: center; color: #64748b; font-size: 0.90rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 10px; }';
+
+  html += '@media screen and (max-width: 640px) {';
+  html += '  body { padding: 6px !important; }';
+  html += '  .container { padding: 8px !important; border-radius: 8px !important; }';
+  html += '  .main-tab-bar { gap: 4px !important; margin-bottom: 10px !important; }';
+  html += '  .tab-btn { padding: 8px 6px !important; font-size: 0.78rem !important; min-width: 100px !important; }';
+  html += '  .nav-bar { padding: 8px !important; gap: 6px !important; flex-wrap: wrap !important; }';
+  html += '  .nav-group { width: 100%; justify-content: space-between; }';
+  html += '  .nav-btn { flex: 1 1 auto !important; padding: 7px 8px !important; font-size: 0.78rem !important; }';
+  html += '  .week-select { flex: 1 1 100% !important; order: -1; margin-bottom: 4px; font-size: 0.85rem !important; }';
+  html += '  .table-wrapper { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }';
+  html += '  table { border-collapse: separate !important; border-spacing: 0; }';
+  html += '  th, td { padding: 6px 4px !important; font-size: 0.75rem !important; min-width: 72px; }';
+  html += '  th.col-funktion, td.col-funktion { position: sticky !important; left: 0 !important; z-index: 2 !important; min-width: 90px !important; max-width: 100px !important; box-shadow: 2px 0 5px rgba(0,0,0,0.08); }';
+  html += '  th.col-funktion { z-index: 3 !important; }';
+  html += '  .calendar-grid { grid-template-columns: repeat(7, minmax(85px, 1fr)) !important; min-width: 600px !important; }';
+  html += '  .cal-cell { min-height: 80px !important; padding: 4px !important; }';
+  html += '  .cal-date-num { font-size: 0.78rem !important; }';
+  html += '  .cal-event { font-size: 0.68rem !important; padding: 2px 4px !important; margin-bottom: 2px !important; }';
+  html += '}';
+
+  html += '</style></head><body>';
+
+  html += '<div class="container">';
+  
+  html += '<div class="main-tab-bar">';
+  html += '<button id="tabBtnUge" class="tab-btn active" onclick="skiftSide(\'sideUgeskema\')">📅 Ugeskema</button>';
+  html += '<button id="tabBtnOp" class="tab-btn" onclick="skiftSide(\'sideOpMaaned\')">🔬 Måned (OP & Overlap)</button>';
+  html += '<button id="tabBtnIndividuel" class="tab-btn" onclick="skiftSide(\'sideIndividuel\')">👤 Månedskalender individuel</button>';
+  html += '</div>';
+
+  // Side 1: Ugeskema
+  html += '<div id="sideUgeskema" class="page-view active">';
+  html += '<div class="nav-bar">';
+  html += '<div class="nav-group">';
+  html += '  <button id="btnPrev" class="nav-btn" onclick="skiftUgeRelativt(-1)">&#171; Forrige</button>';
+  html += '  <select id="weekDropdown" class="week-select" onchange="visUge(parseInt(this.value, 10))">';
+  alleUgerFundet.forEach(function(u) {
+    html += '<option value="' + u + '">Uge ' + u + (u === aktueltUgeNrIDag ? ' (I dag)' : '') + '</option>';
+  });
+  html += '  </select>';
+  html += '  <button id="btnNext" class="nav-btn" onclick="skiftUgeRelativt(1)">Næste &#187;</button>';
+  html += '  <button class="nav-btn-today" onclick="hopTilAktuelUge()">📍 I dag</button>';
+  html += '</div>';
+  html += '<button class="chip-action-btn btn-ical" onclick="aabnPwaModal()">📱 Føj som app på mobilen</button>';
+  html += '</div>';
+
+  alleUgerFundet.forEach(function(uNr) {
+    var uData = ugerData[uNr];
+    var dage = uData.dage;
+    var matrix = uData.matrix;
     
-    if (valgteIndividuelleLaeger.length === 0) {
-      container.innerHTML = `<div class="op-empty">Vælg mindst én person ovenfor for at se månedskalenderen.</div>`;
-      document.getElementById("indStatusBadge").innerText = "0 funktioner";
-      return;
+    var maanedStr = uData.maaneder.join(' / ');
+    var datoPeriodeTekst = 'Uge ' + uNr;
+    if (dage.length > 0) {
+      datoPeriodeTekst += '  |  ' + dage[0].ugedag + ' d. ' + dage[0].dato + ' — ' + dage[dage.length - 1].ugedag + ' d. ' + dage[dage.length - 1].dato;
     }
 
-    const filtreret = alleIndividuelleVagter.filter(item => 
-      item.maanedId === mId && 
-      valgteIndividuelleLaeger.indexOf(item.laege) !== -1 && 
-      aktiveFunktionsFiltre.indexOf(item.katId) !== -1
-    );
+    html += '<div id="ugeView_' + uNr + '" class="week-view" style="display:none;">';
+    html += '<div class="header-box">';
+    html += '<h1 class="title">HÅNDKIRURGISK SEKTION — SLAGELSE SYGEHUS</h1>';
+    html += '<div class="subtitle">';
+    html += '<span class="month-badge">📅 ' + maanedStr + '</span>';
+    html += '<span>' + datoPeriodeTekst + ' &nbsp;(Live opdateret)</span>';
+    html += '</div>';
+    html += '</div>';
 
-    const antalHdv = filtreret.filter(x => x.katId === "hdv").length;
-    const antalOp = filtreret.filter(x => opKatIds.indexOf(x.katId) !== -1).length;
-    const antalAmb = filtreret.filter(x => ["amb", "hambl", "heamb"].indexOf(x.katId) !== -1).length;
-    const antalMv = filtreret.filter(x => x.katId === "mv").length;
-
-    const dele = [];
-    if (antalHdv > 0) dele.push(`${antalHdv} HDV`);
-    if (antalOp > 0) dele.push(`${antalOp} OP`);
-    if (antalAmb > 0) dele.push(`${antalAmb} Amb`);
-    if (antalMv > 0) dele.push(`${antalMv} MV`);
-
-    const totalTxt = `${filtreret.length} funktion${filtreret.length === 1 ? "" : "er"}`;
-    document.getElementById("indStatusBadge").innerText = dele.length > 0 
-      ? `${filtreret.length} i alt (${dele.join(" · ")})` 
-      : totalTxt;
-
-    const posterPrDato = {};
-    filtreret.forEach(item => {
-      if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];
-      posterPrDato[item.dato].push(item);
+    html += '<div class="table-wrapper">';
+    html += '<table><thead><tr>';
+    html += '<th class="col-funktion">FUNKTION</th>';
+    dage.forEach(function(d) {
+      var erIDag = (d.dato === iDagNummer && d.maanedId === iDagMaanedId);
+      var thCls = erIDag ? ' class="today-col-head"' : '';
+      var datoTekst = erIDag ? '<span class="today-badge">' + d.dato + '</span>' : d.dato;
+      html += '<th' + thCls + '>' + d.ugedag.toUpperCase() + '<br>' + datoTekst + '</th>';
     });
-    container.innerHTML = bygKalenderHtml(mId, posterPrDato, false);
-  }
+    html += '</tr></thead><tbody>';
 
-  function findUgeForDato(mId, dag, erWeekendDag) {
-    for (let i = 0; i < alleUger.length; i++) {
-      const uNr = alleUger[i];
-      const uData = ugerData[uNr];
-      if (uData && uData.dage) {
-        for (let d = 0; d < uData.dage.length; d++) {
-          const dagObj = uData.dage[d];
-          if (dagObj.dato === dag && dagObj.maanedId === mId && dagObj.erWeekend === erWeekendDag) {
-            return uNr;
+    layoutKategorier.forEach(function(kat) {
+      html += '<tr>';
+      html += '<td class="col-funktion" style="background-color:' + kat.titelBg + '; color:' + tekstFarveMork + ';">' + kat.titel + '</td>';
+
+      for (var d = 0; d < dage.length; d++) {
+        var isWeekend = dage[d].erWeekend;
+        var erIDag = (dage[d].dato === iDagNummer && dage[d].maanedId === iDagMaanedId);
+        var tdCls = erIDag ? ' class="today-col"' : '';
+        var personer = matrix[kat.id][d] || [];
+
+        if (personer.length > 0) {
+          var personerHtml = personer.map(function(p) {
+            var harNote = (p.note && p.note.trim() !== "");
+            if (harNote) {
+              var safeNote = p.note.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+              return '<span class="cell-item has-tooltip" data-tooltip="' + safeNote + '">' + p.tekst + ' <span class="note-icon">ⓘ</span></span>';
+            }
+            return '<span class="cell-item">' + p.tekst + '</span>';
+          }).join('<br>');
+
+          if (isWeekend) {
+            html += '<td' + tdCls + ' style="background-color:' + fastHwFarve + '; color:' + tekstFarveMork + '; font-weight:600;">' + personerHtml + '</td>';
+          } else {
+            html += '<td' + tdCls + ' style="background-color:' + kat.hverdagBg + '; color:' + tekstFarveMork + '; font-weight:600;">' + personerHtml + '</td>';
+          }
+        } else {
+          if (isWeekend) {
+            html += '<td' + tdCls + ' style="background-color:#f1f5f9; color:#94a3b8;"></td>';
+          } else {
+            html += '<td' + tdCls + ' style="background-color:' + kat.hverdagBg + '; color:' + tekstFarveMork + ';"></td>';
           }
         }
       }
-    }
-    return null;
-  }
-
-  function aabnPwaModal() {
-    document.getElementById("pwaUrlInput").value = window.location.href.split("?")[0];
-    document.getElementById("pwaModal").style.display = "flex";
-  }
-  function lukPwaModal() {
-    document.getElementById("pwaModal").style.display = "none";
-  }
-  function kopierPwaLink() {
-    const input = document.getElementById("pwaUrlInput");
-    input.select();
-    navigator.clipboard.writeText(input.value);
-    alert("Link kopieret! Åbn det i mobilens browser for at gemme som app.");
-  }
-
-  function aabnIcalModal() {
-    // Hvis flere er valgt, bruges den første som udgangspunkt for det personlige iCal feed
-    const primærLaege = valgteIndividuelleLaeger.length > 0 ? valgteIndividuelleLaeger[0] : (laeger[0] ? laeger[0].navn : "");
-    const url = SCRIPT_URL + "?ical=1&laege=" + encodeURIComponent(primærLaege);
-    document.getElementById("modalLaegeNavn").innerText = primærLaege;
-    document.getElementById("icalUrlInput").value = url;
-    document.getElementById("icalModal").style.display = "flex";
-  }
-  function lukIcalModal() {
-    document.getElementById("icalModal").style.display = "none";
-  }
-  function kopierIcalLink() {
-    const input = document.getElementById("icalUrlInput");
-    input.select();
-    navigator.clipboard.writeText(input.value);
-    alert("Kalenderlink kopieret til udklipsholderen!");
-  }
-
-  function bygKalenderHtml(mId, posterPrDato, erOverlapSide) {
-    const aar = (new Date()).getFullYear();
-    const dFoerste = new Date(aar, mId - 1, 1);
-    const dageIMaaned = new Date(aar, mId, 0).getDate();
-    const startUgedag = (dFoerste.getDay() + 6) % 7;
-
-    let out = `<div class="calendar-grid-wrapper"><div class="calendar-grid">`;
-    ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"].forEach(ug => {
-      out += `<div class="cal-head">${ug}</div>`;
+      html += '</tr>';
     });
 
-    for (let f = 0; f < startUgedag; f++) {
-      out += `<div class="cal-cell empty"></div>`;
+    html += '</tbody></table></div></div>';
+  });
+  html += '</div>';
+
+  // Side 2: Måned (OP & Overlap)
+  html += '<div id="sideOpMaaned" class="page-view">';
+  html += '<div class="header-box">';
+  html += '<h1 class="title">MÅNEDSKALENDER — OPERATIONSSTUER & OVERLAP</h1>';
+  html += '<div class="subtitle">Operationsstuer (OP10, OP21, OP22, OP23, HOPA og LA leje). Gule felter angiver overlap mellem valgte læger.</div>';
+  html += '</div>';
+
+  html += '<div class="nav-bar">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '  <span style="font-size:0.86rem; font-weight:600; color:#475569;">Vælg måned:</span>';
+  html += '  <select id="maanedSelect" class="week-select" onchange="opdaterOpVisning()">';
+  Object.keys(fundneMaaneder).forEach(function(mId) {
+    var sel = (parseInt(mId, 10) === aktivMaanedId) ? ' selected' : '';
+    html += '<option value="' + mId + '"' + sel + '>' + fundneMaaneder[mId] + '</option>';
+  });
+  html += '  </select>';
+  html += '</div>';
+  html += '<div id="opStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 OP-vagter</div>';
+  html += '</div>';
+
+  html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">';
+  html += '  <div style="font-size:0.82rem; font-weight:600; color:#64748b;">Vælg læger (klik for at tilføje/fjerne):</div>';
+  html += '  <div style="display:flex; gap:5px;">';
+  html += '    <button class="chip-action-btn" onclick="vaelgAlleLaeger(true)">Vælg alle</button>';
+  html += '    <button class="chip-action-btn" onclick="vaelgAlleLaeger(false)">Nulstil</button>';
+  html += '  </div>';
+  html += '</div>';
+
+  html += '<div class="doctor-chips">';
+  laeger.forEach(function(l, i) {
+    var startAktiv = (i === 0) ? ' active' : '';
+    html += '<button class="chip-btn' + startAktiv + '" data-navn="' + l.navn + '" onclick="toggleLaege(\'' + l.navn + '\', this)">' + l.navn + '</button>';
+  });
+  html += '</div>';
+
+  html += '<div id="kalenderContainer"></div>';
+  html += '</div>';
+
+  // Side 3: Månedskalender Individuel
+  html += '<div id="sideIndividuel" class="page-view">';
+  html += '<div class="header-box">';
+  html += '<h1 class="title">MÅNEDSKALENDER INDIVIDUEL</h1>';
+  html += '<div class="subtitle">Vælg en læge og brug filtrene til at isolere funktioner. Hold musen over en funktion for at se noter.</div>';
+  html += '</div>';
+
+  html += '<div class="nav-bar">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '  <span style="font-size:0.86rem; font-weight:600; color:#475569;">Vælg måned:</span>';
+  html += '  <select id="maanedSelectIndividuel" class="week-select" onchange="opdaterIndividuelVisning()">';
+  Object.keys(fundneMaaneder).forEach(function(mId) {
+    var sel = (parseInt(mId, 10) === aktivMaanedId) ? ' selected' : '';
+    html += '<option value="' + mId + '"' + sel + '>' + fundneMaaneder[mId] + '</option>';
+  });
+  html += '  </select>';
+  html += '</div>';
+  html += '<div style="display:flex; gap:8px; align-items:center;">';
+  html += '  <button class="chip-action-btn btn-ical" onclick="aabnIcalModal()">📲 Få kalender-link</button>';
+  html += '  <div id="indStatusBadge" style="font-size:0.82rem; font-weight:700; background:#e0f2fe; color:#0369a1; padding:5px 12px; border-radius:20px; border:1px solid #bae6fd;">0 funktioner</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Lægechips
+  html += '<div style="font-size:0.82rem; font-weight:600; color:#64748b; margin-bottom:5px;">Vælg læge:</div>';
+  html += '<div class="doctor-chips">';
+  laeger.forEach(function(l, i) {
+    var startAktiv = (i === 0) ? ' active' : '';
+    html += '<button class="chip-btn ind-laege-chip' + startAktiv + '" data-navn="' + l.navn + '" onclick="vaelgIndividuelLaege(\'' + l.navn + '\', this)">' + l.navn + '</button>';
+  });
+  html += '</div>';
+
+  // Filterboks
+  html += '<div class="filter-box">';
+  html += '  <div class="filter-title">';
+  html += '    <span>Filtrér funktioner:</span>';
+  html += '    <div style="display:flex; gap:5px; flex-wrap:wrap;">';
+  html += '      <button class="chip-action-btn" onclick="vaelgKunOpFunktioner()">🔬 Kun OP</button>';
+  html += '      <button class="chip-action-btn" onclick="vaelgKunAmbFunktioner()">🏥 Kun ambulatorier</button>';
+  html += '      <button class="chip-action-btn" onclick="toggleAlleFiltre(true)">Vælg alle</button>';
+  html += '      <button class="chip-action-btn" onclick="toggleAlleFiltre(false)">Nulstil</button>';
+  html += '    </div>';
+  html += '  </div>';
+  html += '  <div class="filter-chips">';
+  layoutKategorier.forEach(function(k) {
+    var erAktiv = (k.id !== 'fri_ferie' && k.id !== 'syg');
+    html += '<span id="ftag_' + k.id + '" class="filter-tag c-' + k.badgeClass + (erAktiv ? ' active' : '') + '" data-katid="' + k.id + '" onclick="toggleFunktionsFilter(\'' + k.id + '\', this)">' + k.titel + '</span>';
+  });
+  html += '  </div>';
+  html += '</div>';
+
+  html += '<div id="individuelKalenderContainer"></div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  // Modal 1: PWA / Mobil Guide
+  html += '<div id="pwaModal" class="modal-overlay" onclick="lukPwaModal(event)">';
+  html += '  <div class="modal-box" onclick="event.stopPropagation()">';
+  html += '    <div style="display:flex; justify-content:space-between; align-items:flex-start;">';
+  html += '      <h2 class="modal-title">Føj skemaet som "App" på telefonen</h2>';
+  html += '      <button onclick="lukPwaModal()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>';
+  html += '    </div>';
+  html += '    <p style="font-size:0.83rem; color:#64748b; margin:4px 0 10px 0;">Åbner skemaet direkte fra hjemmeskærmen i fuld skærm – uden browserbjælker.</p>';
+
+  html += '    <label style="font-size:0.78rem; font-weight:700; color:#334155;">Webapp-link:</label>';
+  html += '    <div class="link-input-box">';
+  html += '      <input type="text" id="pwaUrlInput" class="link-input" readonly>';
+  html += '      <button class="chip-action-btn btn-ical" onclick="kopierPwaLink()">Kopiér link</button>';
+  html += '    </div>';
+
+  html += '    <div class="guide-section">';
+  html += '      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🍎 iPhone / iPad (Safari):</div>';
+  html += '      <div class="guide-step">1. Åbn linket i <b>Safari</b>.</div>';
+  html += '      <div class="guide-step">2. Tryk på <b>Delingsikonet</b> (firkanten med pil op) i bunden.</div>';
+  html += '      <div class="guide-step">3. Rul lidt ned og vælg <b>"Føj til hjemmeskærm"</b>.</div>';
+  html += '      <div class="guide-step">4. Tryk <b>Tilføj</b> i øverste højre hjørne.</div>';
+  html += '    </div>';
+
+  html += '    <div class="guide-section">';
+  html += '      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🤖 Android (Google Chrome):</div>';
+  html += '      <div class="guide-step">1. Åbn linket i <b>Chrome</b>.</div>';
+  html += '      <div class="guide-step">2. Tryk på de <b>tre prikker (menu)</b> i øverste højre hjørne.</div>';
+  html += '      <div class="guide-step">3. Vælg <b>"Føj til startskærm"</b> eller <b>"Installer app"</b>.</div>';
+  html += '      <div class="guide-step">4. Tryk <b>Tilføj / Installer</b>.</div>';
+  html += '    </div>';
+
+  html += '    <button class="nav-btn" style="width:100%; margin-top:8px;" onclick="lukPwaModal()">Forstået</button>';
+  html += '  </div>';
+  html += '</div>';
+
+  // Modal 2: iCal / Kalender Guide
+  html += '<div id="icalModal" class="modal-overlay" onclick="lukIcalModal(event)">';
+  html += '  <div class="modal-box" onclick="event.stopPropagation()">';
+  html += '    <div style="display:flex; justify-content:space-between; align-items:flex-start;">';
+  html += '      <h2 class="modal-title">Abonnér på din vagtkalender</h2>';
+  html += '      <button onclick="lukIcalModal()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>';
+  html += '    </div>';
+  html += '    <p style="font-size:0.83rem; color:#64748b; margin:4px 0 10px 0;">Dit personlige kalenderfeed synkroniserer automatisk dine vagter direkte til din iPhone eller Google Kalender.</p>';
+
+  html += '    <label style="font-size:0.78rem; font-weight:700; color:#334155;">Dit personlige kalenderlink (<span id="modalLaegeNavn"></span>):</label>';
+  html += '    <div class="link-input-box">';
+  html += '      <input type="text" id="icalUrlInput" class="link-input" readonly>';
+  html += '      <button class="chip-action-btn btn-ical" onclick="kopierIcalLink()">Kopiér link</button>';
+  html += '    </div>';
+
+  html += '    <div class="guide-section">';
+  html += '      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🍎 iPhone / iPad (Apple Kalender):</div>';
+  html += '      <div class="guide-step">1. Åbn <b>Indstillinger</b> på din iPhone.</div>';
+  html += '      <div class="guide-step">2. Rul ned og vælg <b>Kalender</b> &gt; <b>Konti</b> &gt; <b>Tilføj konto</b>.</div>';
+  html += '      <div class="guide-step">3. Vælg <b>Anden</b> &gt; <b>Tilføj kalenderabonnement</b>.</div>';
+  html += '      <div class="guide-step">4. Indsæt det kopierede link og tryk <b>Næste</b> &gt; <b>Gem</b>.</div>';
+  html += '    </div>';
+
+  html += '    <div class="guide-section">';
+  html += '      <div style="font-weight:700; font-size:0.84rem; color:#0f172a; margin-bottom:5px;">🌐 Google Kalender (Android & Web):</div>';
+  html += '      <div class="guide-step">1. Åbn <b>calendar.google.com</b> i en browser på computeren.</div>';
+  html += '      <div class="guide-step">2. I venstre side under "Andre kalendere" trykker du på <b>+</b> (plus).</div>';
+  html += '      <div class="guide-step">3. Vælg <b>Fra webadresse</b>.</div>';
+  html += '      <div class="guide-step">4. Indsæt linket og tryk <b>Tilføj kalender</b>.</div>';
+  html += '    </div>';
+
+  html += '    <button class="nav-btn" style="width:100%; margin-top:8px;" onclick="lukIcalModal()">Luk vejledning</button>';
+  html += '  </div>';
+  html += '</div>';
+
+  // Client-side JavaScript
+  html += '<script>';
+  html += 'var alleUger = ' + JSON.stringify(alleUgerFundet) + ';';
+  html += 'var aktueltUgeNrIDag = ' + aktueltUgeNrIDag + ';';
+  html += 'var alleOpDage = ' + JSON.stringify(alleOpDage) + ';';
+  html += 'var alleIndividuelleVagter = ' + JSON.stringify(alleIndividuelleVagter) + ';';
+  html += 'var valgtUge = ' + startUge + ';';
+  html += 'var valgteLaeger = ["' + (laeger.length > 0 ? laeger[0].navn : '') + '"];';
+  
+  html += 'var opKatIds = ["op10", "op21", "op23", "hopa", "hlaamb"];';
+  html += 'var ambKatIds = ["amb", "hambl", "heamb", "hlaamb", "fokus_mv"];';
+  html += 'var individuelValgtLaege = "' + (laeger.length > 0 ? laeger[0].navn : '') + '";';
+  html += 'var aktiveFunktionsFiltre = ' + JSON.stringify(layoutKategorier.map(function(k){ return k.id; }).filter(function(id){ return id !== 'fri_ferie' && id !== 'syg'; })) + ';';
+
+  html += 'function scrollTilDagsDato() {';
+  html += '  if (window.innerWidth > 768) return;';
+  html += '  var aktivUgeEl = document.getElementById("ugeView_" + valgtUge);';
+  html += '  if (!aktivUgeEl) return;';
+  html += '  var wrapper = aktivUgeEl.querySelector(".table-wrapper");';
+  html += '  var todayHead = aktivUgeEl.querySelector("th.today-col-head");';
+  html += '  var funcCol = aktivUgeEl.querySelector("th.col-funktion");';
+  html += '  if (wrapper && todayHead) {';
+  html += '    var funcWidth = funcCol ? funcCol.offsetWidth : 90;';
+  html += '    var scrollPos = todayHead.offsetLeft - funcWidth;';
+  html += '    wrapper.scrollTo({ left: Math.max(0, scrollPos), behavior: "smooth" });';
+  html += '  }';
+  html += '}';
+
+  html += 'function skiftSide(sideId) {';
+  html += '  document.querySelectorAll(".page-view").forEach(function(p){ p.classList.remove("active"); });';
+  html += '  document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });';
+  html += '  document.getElementById(sideId).classList.add("active");';
+  html += '  if(sideId === "sideUgeskema") {';
+  html += '    document.getElementById("tabBtnUge").classList.add("active");';
+  html += '    setTimeout(scrollTilDagsDato, 50);';
+  html += '  } else if(sideId === "sideOpMaaned") {';
+  html += '    document.getElementById("tabBtnOp").classList.add("active");';
+  html += '    opdaterOpVisning();';
+  html += '  } else if(sideId === "sideIndividuel") {';
+  html += '    document.getElementById("tabBtnIndividuel").classList.add("active");';
+  html += '    opdaterIndividuelVisning();';
+  html += '  }';
+  html += '}';
+
+  html += 'function visUge(ugeNr) {';
+  html += '  valgtUge = ugeNr;';
+  html += '  document.querySelectorAll(".week-view").forEach(function(el) { el.style.display = "none"; });';
+  html += '  var target = document.getElementById("ugeView_" + ugeNr);';
+  html += '  if (target) target.style.display = "block";';
+  html += '  document.getElementById("weekDropdown").value = ugeNr;';
+  html += '  var idx = alleUger.indexOf(ugeNr);';
+  html += '  var btnPrev = document.getElementById("btnPrev");';
+  html += '  var btnNext = document.getElementById("btnNext");';
+  html += '  if (idx > 0) { btnPrev.classList.remove("disabled"); } else { btnPrev.classList.add("disabled"); }';
+  html += '  if (idx < alleUger.length - 1) { btnNext.classList.remove("disabled"); } else { btnNext.classList.add("disabled"); }';
+  html += '  setTimeout(scrollTilDagsDato, 50);';
+  html += '}';
+
+  html += 'function skiftUgeRelativt(retning) {';
+  html += '  var idx = alleUger.indexOf(valgtUge);';
+  html += '  var nyIdx = idx + retning;';
+  html += '  if (nyIdx >= 0 && nyIdx < alleUger.length) { visUge(alleUger[nyIdx]); }';
+  html += '}';
+
+  html += 'function hopTilAktuelUge() {';
+  html += '  var target = alleUger.indexOf(aktueltUgeNrIDag) !== -1 ? aktueltUgeNrIDag : alleUger[0];';
+  html += '  if (target) {';
+  html += '    visUge(target);';
+  html += '    setTimeout(scrollTilDagsDato, 100);';
+  html += '  }';
+  html += '}';
+
+  html += 'function toggleLaege(navn, btn) {';
+  html += '  var pos = valgteLaeger.indexOf(navn);';
+  html += '  if (pos !== -1) {';
+  html += '    valgteLaeger.splice(pos, 1);';
+  html += '    btn.classList.remove("active");';
+  html += '  } else {';
+  html += '    valgteLaeger.push(navn);';
+  html += '    btn.classList.add("active");';
+  html += '  }';
+  html += '  opdaterOpVisning();';
+  html += '}';
+
+  html += 'function vaelgAlleLaeger(val) {';
+  html += '  valgteLaeger = [];';
+  html += '  document.querySelectorAll("#sideOpMaaned .chip-btn").forEach(function(btn) {';
+  html += '    if (val) {';
+  html += '      valgteLaeger.push(btn.getAttribute("data-navn"));';
+  html += '      btn.classList.add("active");';
+  html += '    } else {';
+  html += '      btn.classList.remove("active");';
+  html += '    }';
+  html += '  });';
+  html += '  opdaterOpVisning();';
+  html += '}';
+
+  html += 'function opdaterOpVisning() {';
+  html += '  var mId = parseInt(document.getElementById("maanedSelect").value, 10);';
+  html += '  var container = document.getElementById("kalenderContainer");';
+  html += '  if (valgteLaeger.length === 0) {';
+  html += '    container.innerHTML = "<div class=\'op-empty\'>Vælg mindst én læge ovenfor for at se månedskalenderen.</div>";';
+  html += '    document.getElementById("opStatusBadge").innerText = "0 valgt";';
+  html += '    return;';
+  html += '  }';
+  html += '  var filtreret = alleOpDage.filter(function(item) {';
+  html += '    return item.maanedId === mId && valgteLaeger.indexOf(item.laege) !== -1;';
+  html += '  });';
+  html += '  document.getElementById("opStatusBadge").innerText = filtreret.length + " OP-vagt" + (filtreret.length === 1 ? "" : "er");';
+  html += '  var posterPrDato = {};';
+  html += '  filtreret.forEach(function(item) {';
+  html += '    if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];';
+  html += '    posterPrDato[item.dato].push(item);';
+  html += '  });';
+  html += '  container.innerHTML = bygKalenderHtml(mId, posterPrDato, true);';
+  html += '}';
+
+  html += 'function vaelgIndividuelLaege(navn, btn) {';
+  html += '  individuelValgtLaege = navn;';
+  html += '  document.querySelectorAll(".ind-laege-chip").forEach(function(c){ c.classList.remove("active"); });';
+  html += '  btn.classList.add("active");';
+  html += '  opdaterIndividuelVisning();';
+  html += '}';
+
+  html += 'function toggleFunktionsFilter(katId, el) {';
+  html += '  var idx = aktiveFunktionsFiltre.indexOf(katId);';
+  html += '  if (idx !== -1) {';
+  html += '    aktiveFunktionsFiltre.splice(idx, 1);';
+  html += '    el.classList.remove("active");';
+  html += '  } else {';
+  html += '    aktiveFunktionsFiltre.push(katId);';
+  html += '    el.classList.add("active");';
+  html += '  }';
+  html += '  opdaterIndividuelVisning();';
+  html += '}';
+
+  html += 'function toggleAlleFiltre(val) {';
+  html += '  aktiveFunktionsFiltre = [];';
+  html += '  document.querySelectorAll(".filter-tag").forEach(function(tag) {';
+  html += '    var kId = tag.getAttribute("data-katid");';
+  html += '    if (val) {';
+  html += '      aktiveFunktionsFiltre.push(kId);';
+  html += '      tag.classList.add("active");';
+  html += '    } else {';
+  html += '      tag.classList.remove("active");';
+  html += '    }';
+  html += '  });';
+  html += '  opdaterIndividuelVisning();';
+  html += '}';
+
+  html += 'function vaelgKunOpFunktioner() {';
+  html += '  aktiveFunktionsFiltre = opKatIds.slice();';
+  html += '  document.querySelectorAll(".filter-tag").forEach(function(tag) {';
+  html += '    var kId = tag.getAttribute("data-katid");';
+  html += '    if (opKatIds.indexOf(kId) !== -1) { tag.classList.add("active"); } else { tag.classList.remove("active"); }';
+  html += '  });';
+  html += '  opdaterIndividuelVisning();';
+  html += '}';
+
+  html += 'function vaelgKunAmbFunktioner() {';
+  html += '  aktiveFunktionsFiltre = ambKatIds.slice();';
+  html += '  document.querySelectorAll(".filter-tag").forEach(function(tag) {';
+  html += '    var kId = tag.getAttribute("data-katid");';
+  html += '    if (ambKatIds.indexOf(kId) !== -1) { tag.classList.add("active"); } else { tag.classList.remove("active"); }';
+  html += '  });';
+  html += '  opdaterIndividuelVisning();';
+  html += '}';
+
+  html += 'function opdaterIndividuelVisning() {';
+  html += '  var mId = parseInt(document.getElementById("maanedSelectIndividuel").value, 10);';
+  html += '  var container = document.getElementById("individuelKalenderContainer");';
+  html += '  if (!individuelValgtLaege) {';
+  html += '    container.innerHTML = "<div class=\'op-empty\'>Vælg en læge ovenfor.</div>";';
+  html += '    return;';
+  html += '  }';
+  html += '  var filtreret = alleIndividuelleVagter.filter(function(item) {';
+  html += '    return item.maanedId === mId && item.laege.toLowerCase() === individuelValgtLaege.toLowerCase() && aktiveFunktionsFiltre.indexOf(item.katId) !== -1;';
+  html += '  });';
+  html += '  document.getElementById("indStatusBadge").innerText = filtreret.length + " funktion" + (filtreret.length === 1 ? "" : "er");';
+  html += '  var posterPrDato = {};';
+  html += '  filtreret.forEach(function(item) {';
+  html += '    if (!posterPrDato[item.dato]) posterPrDato[item.dato] = [];';
+  html += '    posterPrDato[item.dato].push(item);';
+  html += '  });';
+  html += '  container.innerHTML = bygKalenderHtml(mId, posterPrDato, false);';
+  html += '}';
+
+  // Modal 1: PWA / Mobil Guide
+  html += 'function aabnPwaModal() {';
+  html += '  var base = window.location.href.split("?")[0];';
+  html += '  document.getElementById("pwaUrlInput").value = base;';
+  html += '  document.getElementById("pwaModal").style.display = "flex";';
+  html += '}';
+
+  html += 'function lukPwaModal(e) {';
+  html += '  document.getElementById("pwaModal").style.display = "none";';
+  html += '}';
+
+  html += 'function kopierPwaLink() {';
+  html += '  var input = document.getElementById("pwaUrlInput");';
+  html += '  input.select();';
+  html += '  input.setSelectionRange(0, 99999);';
+  html += '  navigator.clipboard.writeText(input.value);';
+  html += '  alert("Link kopieret! Åbn det i mobilens browser for at gemme som app.");';
+  html += '}';
+
+  // Modal 2: iCal / Kalender Guide
+  html += 'function aabnIcalModal() {';
+  html += '  var base = window.location.href.split("?")[0];';
+  html += '  var url = base + "?ical=1&laege=" + encodeURIComponent(individuelValgtLaege);';
+  html += '  document.getElementById("modalLaegeNavn").innerText = individuelValgtLaege;';
+  html += '  document.getElementById("icalUrlInput").value = url;';
+  html += '  document.getElementById("icalModal").style.display = "flex";';
+  html += '}';
+
+  html += 'function lukIcalModal(e) {';
+  html += '  document.getElementById("icalModal").style.display = "none";';
+  html += '}';
+
+  html += 'function kopierIcalLink() {';
+  html += '  var input = document.getElementById("icalUrlInput");';
+  html += '  input.select();';
+  html += '  input.setSelectionRange(0, 99999);';
+  html += '  navigator.clipboard.writeText(input.value);';
+  html += '  alert("Kalenderlink kopieret til udklipsholderen!");';
+  html += '}';
+
+  // Fælles Kalender-Bygger
+  html += 'function bygKalenderHtml(mId, posterPrDato, erOverlapSide) {';
+  html += '  var aar = (new Date()).getFullYear();';
+  html += '  var dFoerste = new Date(aar, mId - 1, 1);';
+  html += '  var dageIMaaned = new Date(aar, mId, 0).getDate();';
+  html += '  var startUgedag = (dFoerste.getDay() + 6) % 7;';
+  html += '  var out = "<div class=\'calendar-grid-wrapper\'><div class=\'calendar-grid\'>";';
+  var ugenavne = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+  ugenavne.forEach(function(ug) {
+    html += '  out += "<div class=\'cal-head\'>' + ug + '</div>";';
+  });
+  html += '  for (var f = 0; f < startUgedag; f++) { out += "<div class=\'cal-cell empty\'></div>"; }';
+  html += '  for (var dag = 1; dag <= dageIMaaned; dag++) {';
+  html += '    var curDagIndex = (startUgedag + dag - 1) % 7;';
+  html += '    var erWeekendDag = (curDagIndex === 5 || curDagIndex === 6);';
+  var iDagNummerJS = nuDato.getDate();
+  var iDagMaanedJS = nuDato.getMonth() + 1;
+  html += '    var erIDag = (dag === ' + iDagNummerJS + ' && mId === ' + iDagMaanedJS + ');';
+  html += '    var muligeEvents = posterPrDato[dag] || [];';
+  html += '    var events = muligeEvents.filter(function(e) { return e.erWeekend === erWeekendDag; });';
+  
+  html += '    var unikkeLaeger = [];';
+  html += '    events.forEach(function(e){ if (unikkeLaeger.indexOf(e.laege) === -1) unikkeLaeger.push(e.laege); });';
+  html += '    var erOverlap = erOverlapSide && (unikkeLaeger.length > 1);';
+
+  html += '    var cellKlasse = "cal-cell";';
+  html += '    if (erWeekendDag) cellKlasse += " weekend";';
+  html += '    if (erOverlap) cellKlasse += " overlap-day";';
+  html += '    if (erIDag) cellKlasse += " today-cell";';
+
+  html += '    var dagTal = erIDag ? "<span class=\'today-ring\'>" + dag + "</span>" : "<span>" + dag + "</span>";';
+
+  html += '    out += "<div class=\'" + cellKlasse + "\'>";';
+  html += '    out += "  <div class=\'cal-date-bar\'>";';
+  html += '    out += "    <span class=\'cal-date-num\'>" + dagTal + "</span>";';
+  html += '    if (erOverlap) { out += "  <span class=\'overlap-pill\'>⚡ OVERLAP</span>"; }';
+  html += '    out += "  </div>";';
+
+  html += '    out += "  <div class=\'cal-events\'>";';
+  html += '    events.forEach(function(e) {';
+  html += '      var labelTekst = erOverlapSide ? e.opType : e.label;';
+  html += '      var personTekst = erOverlapSide ? (e.supervisor ? (e.laege + " (v/ " + e.supervisor + ")") : e.laege) : "";';
+  
+  html += '      var katKlasse = "c-" + (e.katId ? e.katId : "op10");';
+  html += '      if (erOverlapSide) {';
+  html += '        var t = e.opType.toLowerCase();';
+  html += '        if (t.indexOf("op21") !== -1) katKlasse = "c-op21";';
+  html += '        else if (t.indexOf("op22") !== -1) katKlasse = "c-op21";';
+  html += '        else if (t.indexOf("op23") !== -1) katKlasse = "c-op23";';
+  html += '        else if (t.indexOf("hopa") !== -1) katKlasse = "c-hopa";';
+  html += '        else if (t.indexOf("la leje") !== -1 || t.indexOf("hlaamb") !== -1) katKlasse = "c-hlaamb";';
+  html += '        else katKlasse = "c-op10";';
+  html += '      }';
+
+  html += '      var harNote = (e.note && e.note.trim() !== "");';
+  html += '      var tooltipAttr = "";';
+  html += '      var tooltipKlasse = "";';
+  html += '      if (harNote) {';
+  html += '        tooltipAttr = " data-tooltip=\'" + e.note.replace(/"/g, "&quot;").replace(/\'/g, "&#39;") + "\'";';
+  html += '        tooltipKlasse = " has-tooltip";';
+  html += '      }';
+
+  html += '      out += "<div class=\'cal-event " + katKlasse + tooltipKlasse + "\'" + tooltipAttr + ">";';
+  html += '      out += "  <span>" + labelTekst + (harNote && !erOverlapSide ? " <span class=\'note-icon\'>ⓘ</span>" : "") + "</span>";';
+  html += '      if (personTekst) { out += " <span>" + personTekst + "</span>"; }';
+  html += '      out += "</div>";';
+  html += '    });';
+  html += '    out += "  </div>";';
+  html += '    out += "</div>";';
+  html += '  }';
+
+  html += '  var totalCeller = startUgedag + dageIMaaned;';
+  html += '  var rest = (7 - (totalCeller % 7)) % 7;';
+  html += '  for (var r = 0; r < rest; r++) { out += "<div class=\'cal-cell empty\'></div>"; }';
+  html += '  out += "</div></div>";';
+  html += '  return out;';
+  html += '}';
+
+  html += 'visUge(valgtUge);';
+  html += '</script>';
+  html += '</body></html>';
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('Håndkirurgisk Sektion - Skema & Kalender')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// =================================================================
+// ICAL FEED GENERATOR (.ICS FORMAT)
+// =================================================================
+function genererIcalFeed(laegeNavn) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var kildeArk = ss.getSheetByName("Kopi af Skema/Kalender generator") || ss.getSheets()[0];
+  var data = kildeArk.getDataRange().getDisplayValues();
+
+  var målKolonnerBogstaver = ['D', 'F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X', 'Z'];
+  var targetCol = -1;
+
+  for (var b = 0; b < målKolonnerBogstaver.length; b++) {
+    var cIndex = bogstavTilKolonneIndex(målKolonnerBogstaver[b]);
+    if (data[0] && cIndex < data[0].length) {
+      var init = data[0][cIndex] ? data[0][cIndex].toString().trim() : '';
+      if (!init && data[0][cIndex + 1]) init = data[0][cIndex + 1].toString().trim();
+      if (!init && data[0][cIndex - 1]) init = data[0][cIndex - 1].toString().trim();
+      if (init.toLowerCase() === laegeNavn.toLowerCase() || målKolonnerBogstaver[b].toLowerCase() === laegeNavn.toLowerCase()) {
+        targetCol = cIndex;
+        break;
+      }
     }
-
-    for (let dag = 1; dag <= dageIMaaned; dag++) {
-      const curDagIndex = (startUgedag + dag - 1) % 7;
-      const erMandag = (curDagIndex === 0);
-      const erWeekendDag = (curDagIndex === 5 || curDagIndex === 6);
-      const erIDag = (dag === iDagNummer && mId === iDagMaanedId);
-      const muligeEvents = posterPrDato[dag] || [];
-      const events = muligeEvents.filter(e => e.erWeekend === erWeekendDag);
-
-      const ugeForDag = (events.length > 0 && events[0].uge) 
-        ? events[0].uge 
-        : findUgeForDato(mId, dag, erWeekendDag);
-
-      const unikkeLaeger = [];
-      events.forEach(e => {
-        if (unikkeLaeger.indexOf(e.laege) === -1) unikkeLaeger.push(e.laege);
-      });
-      const erOverlap = erOverlapSide && (unikkeLaeger.length > 1);
-
-      let cellKlasse = "cal-cell";
-      if (erWeekendDag) cellKlasse += " weekend";
-      if (erOverlap) cellKlasse += " overlap-day";
-      if (erIDag) cellKlasse += " today-cell";
-
-      const dagTal = erIDag 
-        ? `<span class="today-ring">${dag}</span>` 
-        : `<span>${dag}</span>`;
-      const ugePill = (ugeForDag && (erMandag || dag === 1)) 
-        ? `<span class="week-mini-pill">Uge ${ugeForDag}</span>` 
-        : "";
-
-      const klikAttr = ugeForDag 
-        ? ` onclick="hopTilUgeFraKalender(${ugeForDag})" title="Klik for at åbne Uge ${ugeForDag}"` 
-        : "";
-
-      out += `<div class="${cellKlasse}">
-        <div class="cal-date-bar${ugeForDag ? " clickable" : ""}"${klikAttr}>
-          <span class="cal-date-num">${dagTal} ${ugePill}</span>
-          ${erOverlap ? `<span class="overlap-pill">⚡ OVERLAP</span>` : ""}
-        </div>
-        <div class="cal-events">`;
-
-      events.forEach(e => {
-        const labelTekst = erOverlapSide ? e.opType : e.label;
-        // På Side 3 vises lægens navn diskret, hvis der er valgt mere end 1 læge
-        let personTekst = "";
-        if (erOverlapSide) {
-          personTekst = e.laege;
-        } else if (valgteIndividuelleLaeger.length > 1) {
-          personTekst = e.laege;
-        }
-
-        let katKlasse = "c-" + (e.katId ? e.katId : "op10");
-        if (erOverlapSide) {
-          const t = e.opType.toLowerCase();
-          if (t.indexOf("op21") !== -1 || t.indexOf("op22") !== -1) katKlasse = "c-op21";
-          else if (t.indexOf("op23") !== -1) katKlasse = "c-op23";
-          else if (t.indexOf("hopa") !== -1) katKlasse = "c-hopa";
-          else if (t.indexOf("la leje") !== -1 || t.indexOf("hlaamb") !== -1) katKlasse = "c-hlaamb";
-          else katKlasse = "c-op10";
-        }
-
-        const harNote = e.note && e.note.trim() !== "";
-        const safeNote = harNote ? e.note.replace(/"/g, "&quot;").replace(/'/g, "&#39;") : "";
-        const safeTitle = (labelTekst + (e.laege ? " - " + e.laege : "") + " (" + dag + "/" + mId + ")").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-        const tooltipAttr = harNote ? ` data-tooltip="${safeNote}" onclick="visNoteToast(event, '${safeNote}', '${safeTitle}')"` : "";
-        const tooltipKlasse = harNote ? " has-tooltip" : "";
-
-        out += `<div class="cal-event ${katKlasse}${tooltipKlasse}"${tooltipAttr}>
-          <span>${labelTekst}${harNote ? ` <span class="note-icon">ⓘ</span>` : ""}</span>
-          ${personTekst ? `<span style="font-weight:600; opacity:0.85; font-size:0.70rem;">(${personTekst})</span>` : ""}
-        </div>`;
-      });
-
-      out += `</div></div>`;
-    }
-
-    const totalCeller = startUgedag + dageIMaaned;
-    const rest = (7 - (totalCeller % 7)) % 7;
-    for (let r = 0; r < rest; r++) {
-      out += `<div class="cal-cell empty"></div>`;
-    }
-    out += `</div></div>`;
-    return out;
   }
 
-  // Start indlæsning
-  hentSkemaData(false);
-</script>
-</body>
-</html>
+  var ics = [];
+  ics.push("BEGIN:VCALENDAR");
+  ics.push("VERSION:2.0");
+  ics.push("PRODID:-//Haandkirurgi Slagelse//Vagtkalender//DA");
+  ics.push("CALSCALE:GREGORIAN");
+  ics.push("METHOD:PUBLISH");
+  ics.push("X-WR-CALNAME:Vagter - " + laegeNavn);
+  ics.push("X-WR-TIMEZONE:Europe/Copenhagen");
+
+  if (targetCol !== -1) {
+    var nuvaerendeUgeNr = null;
+    var startMaanedIndex = 7;
+    var lobendeMaaned = startMaanedIndex;
+    var forrigeDato = null;
+    var curAar = (new Date()).getFullYear();
+
+    for (var r = 1; r < data.length; r++) {
+      var colA = (data[r][0] || '').toString().trim();
+      var match = colA.match(/^uge\s*(\d+)/i);
+      if (match) nuvaerendeUgeNr = parseInt(match[1], 10);
+
+      var colB = (data[r][1] || '').toString().trim();
+      var colC = (data[r][2] || '').toString().trim();
+      var ugedag = colC || colB;
+      var datoNr = parseInt(colB, 10);
+
+      if (ugedag && !isNaN(datoNr)) {
+        if (forrigeDato !== null && datoNr === 1 && forrigeDato > 20) {
+          lobendeMaaned = (lobendeMaaned + 1) % 12;
+        }
+        forrigeDato = datoNr;
+
+        var celle = (data[r][targetCol] || '').toString().trim();
+        var rawNote = (data[r][targetCol + 1] || '').toString().trim();
+        
+        var note = rawNote;
+        var renNote = rawNote.toLowerCase().replace(/[^a-z]/g, '');
+        if (renNote === 'laleje' || renNote === 'hlaamb') {
+          note = '';
+        }
+
+        if (celle !== '') {
+          var parseRes = splitFunktionsKode(celle);
+          var ren = parseRes.renKode;
+          var supervisor = parseRes.supervisor;
+
+          var titel = celle.toUpperCase();
+          var startTid = "080000";
+          var slutTid = "153000";
+
+          if (ren === 'hdv') {
+            titel = "HDV Døgnvagt"; startTid = "080000"; slutTid = "083000";
+          } else if (ren === 'hw') {
+            titel = "OP10 (hw) Weekend"; startTid = "080000"; slutTid = "160000";
+          } else if (ren.indexOf('op') !== -1) {
+            titel = "OP: " + ren.toUpperCase(); startTid = "080000"; slutTid = "153000";
+          } else if (ren === 'hopa') {
+            titel = "HOPA"; startTid = "080000"; slutTid = "153000";
+          } else if (ren === 'hlaamb') {
+            titel = "LA Leje"; startTid = "080000"; slutTid = "153000";
+          } else if (ren.indexOf('amb') !== -1) {
+            titel = "Ambulatorie"; startTid = "080000"; slutTid = "153000";
+          } else if (ren === 'syg') {
+            titel = "Syg"; startTid = "080000"; slutTid = "153000";
+          } else if (ren === 'oms' || ren === 'omsorgsdag') {
+            titel = "Omsorgsdag"; startTid = "080000"; slutTid = "153000";
+          }
+
+          if (supervisor) {
+            titel += " (v/ " + supervisor + ")";
+          }
+
+          var mStr = (lobendeMaaned + 1 < 10 ? '0' : '') + (lobendeMaaned + 1);
+          var dStr = (datoNr < 10 ? '0' : '') + datoNr;
+          var datoStamp = "" + curAar + mStr + dStr;
+
+          ics.push("BEGIN:VEVENT");
+          ics.push("UID:vagt-" + encodeURIComponent(laegeNavn) + "-" + r + "@slagelse.regionsjaelland.dk");
+          ics.push("DTSTAMP:" + datoStamp + "T000000Z");
+          ics.push("DTSTART;TZID=Europe/Copenhagen:" + datoStamp + "T" + startTid);
+          ics.push("DTEND;TZID=Europe/Copenhagen:" + datoStamp + "T" + slutTid);
+          ics.push("SUMMARY:" + titel);
+          if (note) {
+            ics.push("DESCRIPTION:" + note.replace(/\n/g, " "));
+          }
+          ics.push("LOCATION:Håndkirurgisk Sektion, Slagelse Sygehus");
+          ics.push("END:VEVENT");
+        }
+      }
+    }
+  }
+
+  ics.push("END:VCALENDAR");
+
+  return ContentService.createTextOutput(ics.join("\r\n"))
+    .setMimeType(ContentService.MimeType.ICAL);
+}
+
+function hentAktueltUgenummer() {
+  var d = new Date();
+  var target = new Date(d.valueOf());
+  var dayNr = (d.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNr + 3);
+  var firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+  }
+  return 1 + Math.ceil((firstThursday - target) / 604800000);
+}
+
+function bogstavTilKolonneIndex(bogstav) {
+  var b = bogstav.toUpperCase();
+  var sum = 0;
+  for (var i = 0; i < b.length; i++) {
+    sum = sum * 26 + (b.charCodeAt(i) - 64);
+  }
+  return sum - 1;
+}
+
+// =================================================================
+// FEJLKONTROL: TJEK FOR UKENDTE KODER I REGNEARKET
+// =================================================================
+function tjekForUkendteFunktioner() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ark = ss.getSheetByName("Kopi af Skema/Kalender generator") || ss.getSheets()[0];
+  var data = ark.getDataRange().getDisplayValues();
+
+  var godkendteKoder = [
+    'hdv', 'op10', 'h10op', 'hw', 'op21', 'h21op', 'op22', 'h22op', 
+    'op23', 'h23op', 'hopa', 'hlaamb', 'laleje', 'hamb1', 'hamb2', 
+    'hamb3', 'amb1', 'amb2', 'amb3', 'amb', 'hambl', 'heamb', 'hadm', 
+    'ad', 'kursus', 'sh', 'fri', 'fe', 'ferie', 'f', 'syg', 'oms', 'omsorgsdag'
+  ];
+
+  var målKolonnerBogstaver = ['D', 'F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X', 'Z'];
+  var laegeKolonner = [];
+  
+  målKolonnerBogstaver.forEach(function(bogstav) {
+    var cIndex = bogstavTilKolonneIndex(bogstav);
+    if (data[0] && cIndex < data[0].length) {
+      var navn = (data[0][cIndex] || '').toString().trim();
+      if (!navn && data[0][cIndex + 1]) navn = data[0][cIndex + 1].toString().trim();
+      if (navn) {
+        laegeKolonner.push({ cIndex: cIndex, navn: navn });
+      }
+    }
+  });
+
+  var fejlFundet = [];
+
+  for (var r = 1; r < data.length; r++) {
+    var datoInfo = (data[r][1] || '').toString().trim() + ' ' + (data[r][2] || '').toString().trim();
+
+    laegeKolonner.forEach(function(laege) {
+      var celleTekst = (data[r][laege.cIndex] || '').toString().trim();
+      if (!celleTekst) return;
+
+      var renKode = celleTekst.toLowerCase();
+      if (renKode.indexOf('/') !== -1) {
+        renKode = renKode.split('/')[0].trim();
+      }
+
+      if (godkendteKoder.indexOf(renKode) === -1) {
+        fejlFundet.push("'" + celleTekst + "' (" + laege.navn + (datoInfo ? ", d. " + datoInfo : "") + ")");
+      }
+    });
+  }
+
+  var advarselsCelle = ark.getRange("A1");
+
+  if (fejlFundet.length > 0) {
+    advarselsCelle.setValue("⚠️ UKENDT KODE: " + fejlFundet.slice(0, 3).join(" | ") + (fejlFundet.length > 3 ? " (+flere)" : ""))
+      .setBackground("#fee2e2")
+      .setFontColor("#991b1b")
+      .setFontWeight("bold");
+  } else {
+    advarselsCelle.setValue("✅ Alle funktioner er godkendt")
+      .setBackground("#dcfce7")
+      .setFontColor("#166534")
+      .setFontWeight("bold");
+  }
+}
+
+function onEdit(e) {
+  try {
+    tjekForUkendteFunktioner();
+  } catch (err) {}
+}
