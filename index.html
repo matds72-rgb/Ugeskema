@@ -383,6 +383,72 @@
     });
   }
 
+  /* FIND KRONOLOGISK RÆKKEFØLGE AF MÅNEDER FRA SKEMAET (f.eks. Aug -> Dec -> Jan) */
+  function hentKronologiskeMaaneder() {
+    const rækkefølge = [];
+    alleUger.forEach(uNr => {
+      const uData = ugerData[uNr];
+      if (uData && uData.dage) {
+        uData.dage.forEach(d => {
+          const mStr = String(d.maanedId);
+          if (fundneMaaneder[mStr] && rækkefølge.indexOf(mStr) === -1) {
+            rækkefølge.push(mStr);
+          }
+        });
+      }
+    });
+    Object.keys(fundneMaaneder).forEach(k => {
+      if (rækkefølge.indexOf(k) === -1) rækkefølge.push(k);
+    });
+    return rækkefølge;
+  }
+
+  /* BEREGN KORREKT UGEDAG FOR D. 1. I MÅNEDEN DIREKTE UD FRA SKEMAETS DAGE (ELLER KALENDERÅR) */
+  function beregnMaanedsInfo(mId) {
+    const ugedagMap = { "man": 0, "tir": 1, "ons": 2, "tor": 3, "fre": 4, "lør": 5, "søn": 6 };
+    let fundetStartUgedag = null;
+    let maxDatoISkema = 0;
+
+    for (let i = 0; i < alleUger.length; i++) {
+      const uData = ugerData[alleUger[i]];
+      if (uData && uData.dage) {
+        for (let d = 0; d < uData.dage.length; d++) {
+          const dagObj = uData.dage[d];
+          if (dagObj.maanedId === mId) {
+            if (dagObj.dato > maxDatoISkema) maxDatoISkema = dagObj.dato;
+            if (fundetStartUgedag === null && dagObj.ugedag) {
+              const kort = dagObj.ugedag.trim().toLowerCase().substring(0, 3);
+              if (ugedagMap[kort] !== undefined) {
+                const ugedagIdx = ugedagMap[kort];
+                // Regn baglæns fra denne dato til d. 1. i samme måned
+                fundetStartUgedag = (((ugedagIdx - (dagObj.dato - 1)) % 7) + 7) % 7;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Bestem det rigtige årstal (håndterer årsskifte fra efterår til januar/forår)
+    const nuAar = (new Date()).getFullYear();
+    const nuMd = (new Date()).getMonth() + 1;
+    let beregnetAar = nuAar;
+    if (nuMd >= 8 && mId <= 7) {
+      beregnetAar = nuAar + 1;
+    } else if (nuMd <= 6 && mId >= 8) {
+      beregnetAar = nuAar - 1;
+    }
+
+    const kalenderDageIMaaned = new Date(beregnetAar, mId, 0).getDate();
+    const dageIMaaned = Math.max(kalenderDageIMaaned, maxDatoISkema);
+    const fallbackStartUgedag = (new Date(beregnetAar, mId - 1, 1).getDay() + 6) % 7;
+
+    return {
+      startUgedag: fundetStartUgedag !== null ? fundetStartUgedag : fallbackStartUgedag,
+      dageIMaaned: dageIMaaned
+    };
+  }
+
   function anvendSkemaData(data, erOpdatering) {
     ugerData = data.ugerData || {};
     alleUger = data.alleUger || [];
@@ -445,7 +511,7 @@
     const btnRef = document.getElementById("btnRefresh");
     if (btnRef) btnRef.innerText = "⏳ Henter...";
 
-    const CACHE_KEY = "hk_skemaData_cache_v2";
+    const CACHE_KEY = "hk_skemaData_cache_v3";
     let harVistFraCache = false;
 
     if (!erGenindlaesning) {
@@ -498,7 +564,8 @@
     const tidligereOpM = beholdValg && mSelectOp.value ? parseInt(mSelectOp.value, 10) : null;
     const tidligereIndM = beholdValg && mSelectInd.value ? parseInt(mSelectInd.value, 10) : null;
 
-    const mKeys = Object.keys(fundneMaaneder);
+    // Brug den kronologiske rækkefølge af måneder fra skemaet (så Januar kommer efter December)
+    const mKeys = hentKronologiskeMaaneder();
     const defaultMId = fundneMaaneder[iDagMaanedId] ? iDagMaanedId : (mKeys[0] ? parseInt(mKeys[0], 10) : 8);
 
     const mOptionsOp = mKeys.map(mId => {
@@ -852,7 +919,7 @@
       if (uData && uData.dage) {
         for (let d = 0; d < uData.dage.length; d++) {
           const dagObj = uData.dage[d];
-          if (dagObj.dato === dag && dagObj.maanedId === mId && dagObj.erWeekend === erWeekendDag) {
+          if (dagObj.dato === dag && dagObj.maanedId === mId) {
             return uNr;
           }
         }
@@ -893,10 +960,10 @@
   }
 
   function bygKalenderHtml(mId, posterPrDato, erOverlapSide) {
-    const aar = (new Date()).getFullYear();
-    const dFoerste = new Date(aar, mId - 1, 1);
-    const dageIMaaned = new Date(aar, mId, 0).getDate();
-    const startUgedag = (dFoerste.getDay() + 6) % 7;
+    // Beregn månedens start-ugedag og antal dage direkte ud fra skemaets faktiske dage
+    const mInfo = beregnMaanedsInfo(mId);
+    const startUgedag = mInfo.startUgedag;
+    const dageIMaaned = mInfo.dageIMaaned;
 
     let out = `<div class="calendar-grid-wrapper"><div class="calendar-grid">`;
     ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"].forEach(ug => {
@@ -912,8 +979,7 @@
       const erMandag = (curDagIndex === 0);
       const erWeekendDag = (curDagIndex === 5 || curDagIndex === 6);
       const erIDag = (dag === iDagNummer && mId === iDagMaanedId);
-      const muligeEvents = posterPrDato[dag] || [];
-      const events = muligeEvents.filter(e => e.erWeekend === erWeekendDag);
+      const events = posterPrDato[dag] || [];
 
       const ugeForDag = (events.length > 0 && events[0].uge) 
         ? events[0].uge 
